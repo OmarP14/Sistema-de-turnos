@@ -41,11 +41,13 @@ export default function Agenda() {
       {/* Notificación */}
       {mensaje && (
         <div style={{
-          position:'fixed', top:'72px', right:'16px', zIndex:100,
-          padding:'12px 20px', borderRadius:'2px', fontSize:'0.85rem',
-          background: mensaje.tipo==='ok'?'rgba(30,111,217,0.15)':'rgba(232,25,44,0.15)',
-          border:`1px solid ${mensaje.tipo==='ok'?'rgba(30,111,217,0.4)':'rgba(232,25,44,0.4)'}`,
-          color: mensaje.tipo==='ok'?'#4d9fff':'#ff4d5e',
+          padding:'10px 18px', borderRadius:'6px', fontSize:'0.82rem',
+          boxShadow:'0 4px 20px rgba(0,0,0,0.4)',
+          background: mensaje.tipo==='ok'?'rgba(15,30,60,0.97)':'rgba(30,8,12,0.97)',
+          border:`1px solid ${mensaje.tipo==='ok'?'rgba(59,130,246,0.5)':'rgba(232,25,44,0.5)'}`,
+          color: mensaje.tipo==='ok'?'#93c5fd':'#fb7185',
+          fontFamily:"'Oswald',sans-serif", letterSpacing:'0.08em',
+          textAlign:'center',
         }}>
           {mensaje.tipo==='ok'?'✓':'✕'} {mensaje.texto}
         </div>

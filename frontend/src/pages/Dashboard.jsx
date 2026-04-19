@@ -48,21 +48,28 @@ function GraficoSemanal({ datos }) {
 export default function Dashboard({ onPendientesChange }) {
   const [turnos,  setTurnos]  = useState([])
   const [loading, setLoading] = useState(true)
-  const [stats,   setStats]   = useState({ total:0, confirmados:0, pendientes:0, completados:0 })
+  const [stats,   setStats]   = useState({ total:0, confirmados:0, pendientes:0, completados:0, cancelados:0 })
   const [grafico, setGrafico] = useState([])
   const [mensaje, setMensaje] = useState(null)
   const [config,  setConfig]  = useState({ barbershopName:'BARBERAPP' })
 
   const cargarTurnos = async () => {
     try {
-      const res  = await turnosAPI.getHoy()
-      const data = res.data
-      setTurnos(data)
-      const pend = data.filter(t => t.estado==='PENDIENTE').length
+      const res  = await turnosAPI.getTodos()
+      const hoy  = new Date(); hoy.setHours(0,0,0,0)
+      const data = res.data.filter(t => new Date(t.fechaHora) >= hoy)
+
+      const activos    = data.filter(t => t.estado !== 'CANCELADO').sort((a,b) => new Date(a.fechaHora)-new Date(b.fechaHora))
+      const cancelados = data.filter(t => t.estado === 'CANCELADO').sort((a,b) => new Date(a.fechaHora)-new Date(b.fechaHora))
+      setTurnos([...activos, ...cancelados])
+
+      const pend = activos.filter(t => t.estado==='PENDIENTE').length
       setStats({
-        total: data.length, pendientes: pend,
-        confirmados: data.filter(t=>t.estado==='CONFIRMADO').length,
-        completados: data.filter(t=>t.estado==='COMPLETADO').length,
+        total:      activos.length,
+        pendientes: pend,
+        confirmados: activos.filter(t=>t.estado==='CONFIRMADO').length,
+        completados: activos.filter(t=>t.estado==='COMPLETADO').length,
+        cancelados:  cancelados.length,
       })
       onPendientesChange?.(pend)
     } catch(e){ console.error(e) }
@@ -87,6 +94,8 @@ export default function Dashboard({ onPendientesChange }) {
   useEffect(() => {
     cargarTurnos(); cargarGrafico()
     try { const c=localStorage.getItem('barbershop_config'); if(c) setConfig(JSON.parse(c)) } catch {}
+    const iv = setInterval(() => { cargarTurnos(); cargarGrafico() }, 30000)
+    return () => clearInterval(iv)
   }, [])
 
   const mostrarMsg = (tipo, texto) => { setMensaje({tipo,texto}); setTimeout(()=>setMensaje(null),3000) }
@@ -96,6 +105,10 @@ export default function Dashboard({ onPendientesChange }) {
   }
 
   const fechaHoy = format(new Date(),"EEEE d 'de' MMMM yyyy",{locale:es})
+
+  // Separar activos y cancelados para renderizado
+  const turnosActivos    = turnos.filter(t => t.estado !== 'CANCELADO')
+  const turnosCancelados = turnos.filter(t => t.estado === 'CANCELADO')
 
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:'1.25rem' }} className="animate-fade-up">
@@ -150,25 +163,26 @@ export default function Dashboard({ onPendientesChange }) {
         </div>
       </div>
 
-      {/* Stats */}
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'10px' }}
-        className="grid-cols-2 md:grid-cols-4">
+      {/* Stats — 5 tarjetas */}
+      <div style={{ display:'grid', gap:'8px', gridTemplateColumns:'repeat(3,1fr)' }}
+        className="md:grid-cols-5">
         {[
           { label:'HOY',        value:stats.total,       accent:'#F8F8F8', glow:'rgba(248,248,248,0.1)' },
           { label:'PENDIENTES', value:stats.pendientes,  accent:'#E8192C', glow:'rgba(232,25,44,0.15)'  },
           { label:'CONFIRMADOS',value:stats.confirmados, accent:'#1E6FD9', glow:'rgba(30,111,217,0.15)' },
           { label:'COMPLETADOS',value:stats.completados, accent:'#22c55e', glow:'rgba(34,197,94,0.15)'  },
+          { label:'CANCELADOS', value:stats.cancelados,  accent:'#475569', glow:'none'                  },
         ].map(s => (
           <div key={s.label} style={{
-            backgroundColor:'#111', border:`1px solid #1e1e1e`,
+            backgroundColor:'#111', border:'1px solid #1e1e1e',
             borderTop:`2px solid ${s.accent}`, borderRadius:'2px',
-            padding:'1rem', textAlign:'center',
+            padding:'0.875rem', textAlign:'center',
             boxShadow: stats.pendientes>0&&s.label==='PENDIENTES' ? `0 0 20px ${s.glow}` : 'none'
           }}>
-            <div style={{ fontFamily:"'Bebas Neue',cursive", fontSize:'2.5rem',
+            <div style={{ fontFamily:"'Bebas Neue',cursive", fontSize:'2.2rem',
               color:s.accent, lineHeight:1, letterSpacing:'0.02em' }}>{s.value}</div>
-            <div style={{ fontFamily:"'Oswald',sans-serif", fontSize:'0.62rem',
-              color:'#555', letterSpacing:'0.12em', textTransform:'uppercase', marginTop:'4px' }}>{s.label}</div>
+            <div style={{ fontFamily:"'Oswald',sans-serif", fontSize:'0.58rem',
+              color:'#555', letterSpacing:'0.1em', textTransform:'uppercase', marginTop:'4px' }}>{s.label}</div>
           </div>
         ))}
       </div>
@@ -176,19 +190,19 @@ export default function Dashboard({ onPendientesChange }) {
       {/* Gráfico */}
       {grafico.length>0 && <GraficoSemanal datos={grafico} />}
 
-      {/* Lista turnos */}
+      {/* Lista turnos activos */}
       <div>
         <div style={{ display:'flex', alignItems:'center', gap:'10px', marginBottom:'12px' }}>
           <div style={{ height:'20px', width:'3px', backgroundColor:'#E8192C', borderRadius:'1px' }} />
           <h2 style={{ fontFamily:"'Oswald',sans-serif", fontSize:'1rem',
             letterSpacing:'0.12em', textTransform:'uppercase', color:'#888' }}>
-            Turnos de Hoy
+            Turnos Próximos
           </h2>
         </div>
 
         {loading ? (
           <div style={{ textAlign:'center', padding:'3rem', color:'#555' }}>Cargando...</div>
-        ) : turnos.length===0 ? (
+        ) : turnosActivos.length===0 && turnosCancelados.length===0 ? (
           <div className="card" style={{ textAlign:'center', padding:'3rem' }}>
             <Scissors size={36} style={{ color:'#222', margin:'0 auto 12px' }} />
             <p style={{ color:'#555', fontFamily:"'Oswald',sans-serif", letterSpacing:'0.08em' }}>
@@ -197,16 +211,15 @@ export default function Dashboard({ onPendientesChange }) {
           </div>
         ) : (
           <div style={{ display:'flex', flexDirection:'column', gap:'6px' }}>
-            {turnos.map((turno,i) => (
+
+            {/* Turnos activos */}
+            {turnosActivos.map((turno, i) => (
               <div key={turno.id} className="card-red animate-slide-in"
-                style={{ animationDelay:`${i*0.05}s`,
-                  display:'flex', flexDirection:'column', gap:'8px' }}>
-                {/* Hora */}
+                style={{ animationDelay:`${i*0.05}s`, display:'flex', flexDirection:'column', gap:'8px' }}>
                 <div style={{ minWidth:'56px', fontFamily:"'Bebas Neue',cursive",
                   fontSize:'1.4rem', color:'#E8192C', letterSpacing:'0.05em', lineHeight:1 }}>
                   {format(new Date(turno.fechaHora),'HH:mm')}
                 </div>
-                {/* Info */}
                 <div style={{ flex:1, minWidth:0 }}>
                   <div style={{ display:'flex', alignItems:'center', gap:'8px', flexWrap:'wrap', marginBottom:'4px' }}>
                     <span style={{ color:'#F8F8F8', fontFamily:"'Oswald',sans-serif",
@@ -220,10 +233,56 @@ export default function Dashboard({ onPendientesChange }) {
                     {turno.notas&&<span>📝 {turno.notas}</span>}
                   </div>
                 </div>
-                {/* Acciones */}
                 <BotonesAccion turno={turno} onAccion={accion} />
               </div>
             ))}
+
+            {/* Sección cancelados */}
+            {turnosCancelados.length > 0 && (
+              <>
+                <div style={{ display:'flex', alignItems:'center', gap:'10px', marginTop:'8px' }}>
+                  <div style={{ flex:1, height:'1px', background:'#1a1a1a' }} />
+                  <span style={{ fontFamily:"'Oswald',sans-serif", fontSize:'0.65rem',
+                    letterSpacing:'0.15em', textTransform:'uppercase', color:'#333',
+                    whiteSpace:'nowrap' }}>
+                    Cancelados ({turnosCancelados.length})
+                  </span>
+                  <div style={{ flex:1, height:'1px', background:'#1a1a1a' }} />
+                </div>
+
+                {turnosCancelados.map((turno, i) => (
+                  <div key={turno.id} className="animate-slide-in"
+                    style={{
+                      animationDelay:`${i*0.05}s`,
+                      display:'flex', flexDirection:'column', gap:'8px',
+                      background:'#0c0c0c',
+                      border:'1px solid #161616',
+                      borderLeft:'3px solid #1e293b',
+                      borderRadius:'2px', padding:'1rem',
+                      opacity: 0.6,
+                    }}>
+                    <div style={{ minWidth:'56px', fontFamily:"'Bebas Neue',cursive",
+                      fontSize:'1.4rem', color:'#334155', letterSpacing:'0.05em', lineHeight:1 }}>
+                      {format(new Date(turno.fechaHora),'HH:mm')}
+                    </div>
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ display:'flex', alignItems:'center', gap:'8px', flexWrap:'wrap', marginBottom:'4px' }}>
+                        <span style={{ color:'#475569', fontFamily:"'Oswald',sans-serif",
+                          fontWeight:500, fontSize:'0.95rem',
+                          textDecoration:'line-through' }}>{turno.clienteNombre}</span>
+                        <span className={BADGE[turno.estado]}>{LABEL[turno.estado]}</span>
+                      </div>
+                      <div style={{ display:'flex', gap:'12px', flexWrap:'wrap',
+                        color:'#334155', fontSize:'0.78rem', fontFamily:"'Barlow',sans-serif" }}>
+                        <span>📱 {turno.clienteTelefono}</span>
+                        <span>✂️ {turno.servicio}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </>
+            )}
+
           </div>
         )}
       </div>

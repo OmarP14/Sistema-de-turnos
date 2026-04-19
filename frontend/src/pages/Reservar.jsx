@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { turnosAPI } from '../utils/api'
+import { turnosAPI, disponibilidadAPI } from '../utils/api'
 import { format, addDays, startOfToday, isBefore, isToday } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { ChevronLeft, ChevronRight, CheckCircle, Loader, Scissors, Clock, User, Phone, Calendar } from 'lucide-react'
@@ -190,42 +190,78 @@ function PasoServicio({ onNext }) {
 // ─── PASO 2: Elegir día ───────────────────────────────────────────────────────
 function PasoDia({ onNext, onBack }) {
   const hoy = startOfToday()
-  const [mes, setMes] = useState(0) // 0 = esta semana, puede expandirse
-  const dias = Array.from({ length: 14 }, (_, i) => addDays(hoy, i))
-    .filter(d => d.getDay() !== 0) // sin domingos
+  const [disponibilidad, setDisponibilidad] = useState({ diasLaborales: [1,2,3,4,5,6], fechasBloqueadas: [] })
+  const [cargando, setCargando] = useState(true)
+
+  useEffect(() => {
+    disponibilidadAPI.get()
+      .then(res => setDisponibilidad(res.data))
+      .catch(() => {})
+      .finally(() => setCargando(false))
+  }, [])
+
+  const dias = Array.from({ length: 21 }, (_, i) => addDays(hoy, i))
+    .filter(d => {
+      if (!disponibilidad.diasLaborales.includes(d.getDay())) return false
+      if (disponibilidad.fechasBloqueadas.includes(format(d, 'yyyy-MM-dd'))) return false
+      return true
+    })
+
+  if (cargando) return (
+    <div style={{ textAlign:'center', padding:'2rem', color:'#64748b' }}>
+      <Loader size={24} style={{ animation:'spin 1s linear infinite', margin:'0 auto' }} />
+    </div>
+  )
 
   return (
     <div>
       <div style={S.stepTitle}>¿Qué día preferís?</div>
-      <div style={S.stepSub}>Próximos 14 días disponibles</div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '8px', marginBottom: '1.25rem' }}>
-        {dias.map(dia => {
-          const esHoy = isToday(dia)
-          return (
-            <button key={dia.toISOString()} onClick={() => onNext(dia)}
-              style={{
-                padding: '12px 8px', borderRadius: '8px', cursor: 'pointer',
-                border: '1px solid rgba(59,130,246,0.15)',
-                background: esHoy ? 'rgba(232,25,44,0.08)' : 'rgba(5,12,28,0.5)',
-                transition: 'all 0.2s', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px',
-              }}
-              onMouseEnter={e => { e.currentTarget.style.border='1px solid rgba(232,25,44,0.4)'; e.currentTarget.style.background='rgba(232,25,44,0.08)' }}
-              onMouseLeave={e => { e.currentTarget.style.border='1px solid rgba(59,130,246,0.15)'; e.currentTarget.style.background= esHoy ? 'rgba(232,25,44,0.08)' : 'rgba(5,12,28,0.5)' }}>
-              <span style={{ fontFamily:"'Oswald',sans-serif", fontSize:'0.62rem',
-                letterSpacing:'0.1em', textTransform:'uppercase', color: esHoy ? '#E8192C' : '#64748b' }}>
-                {esHoy ? 'HOY' : format(dia, 'EEE', { locale: es }).toUpperCase()}
-              </span>
-              <span style={{ fontFamily:"'Bebas Neue',cursive", fontSize:'1.6rem',
-                color: '#F8F8F8', lineHeight: 1 }}>
-                {format(dia, 'd')}
-              </span>
-              <span style={{ fontFamily:"'Barlow',sans-serif", fontSize:'0.7rem', color:'#64748b' }}>
-                {format(dia, 'MMM', { locale: es })}
-              </span>
-            </button>
-          )
-        })}
-      </div>
+      <div style={S.stepSub}>Próximos días disponibles</div>
+
+      {dias.length === 0 ? (
+        <div style={{ textAlign:'center', padding:'2rem',
+          background:'rgba(59,130,246,0.06)', border:'1px solid rgba(59,130,246,0.15)',
+          borderRadius:'8px', marginBottom:'1.25rem' }}>
+          <p style={{ color:'#64748b', fontFamily:"'Oswald',sans-serif",
+            fontSize:'0.85rem', letterSpacing:'0.1em', margin:0 }}>
+            No hay turnos disponibles en los próximos días.
+          </p>
+          <p style={{ color:'#475569', fontFamily:"'Barlow',sans-serif",
+            fontSize:'0.78rem', marginTop:'8px' }}>
+            Volvé a consultar pronto.
+          </p>
+        </div>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '8px', marginBottom: '1.25rem' }}>
+          {dias.map(dia => {
+            const esHoy = isToday(dia)
+            return (
+              <button key={dia.toISOString()} onClick={() => onNext(dia)}
+                style={{
+                  padding: '12px 8px', borderRadius: '8px', cursor: 'pointer',
+                  border: '1px solid rgba(59,130,246,0.15)',
+                  background: esHoy ? 'rgba(232,25,44,0.08)' : 'rgba(5,12,28,0.5)',
+                  transition: 'all 0.2s', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.border='1px solid rgba(232,25,44,0.4)'; e.currentTarget.style.background='rgba(232,25,44,0.08)' }}
+                onMouseLeave={e => { e.currentTarget.style.border='1px solid rgba(59,130,246,0.15)'; e.currentTarget.style.background= esHoy ? 'rgba(232,25,44,0.08)' : 'rgba(5,12,28,0.5)' }}>
+                <span style={{ fontFamily:"'Oswald',sans-serif", fontSize:'0.62rem',
+                  letterSpacing:'0.1em', textTransform:'uppercase', color: esHoy ? '#E8192C' : '#64748b' }}>
+                  {esHoy ? 'HOY' : format(dia, 'EEE', { locale: es }).toUpperCase().replace('.', '')}
+                </span>
+                <span style={{ fontFamily:"'Bebas Neue',cursive", fontSize:'1.6rem',
+                  color: '#F8F8F8', lineHeight: 1 }}>
+                  {format(dia, 'd')}
+                </span>
+                <span style={{ fontFamily:"'Barlow',sans-serif", fontSize:'0.7rem', color:'#64748b' }}>
+                  {format(dia, 'MMM', { locale: es })}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+      )}
+
       <button style={S.btnBack} onClick={onBack}><ChevronLeft size={14}/> Volver</button>
     </div>
   )
@@ -330,17 +366,19 @@ function PasoDatos({ servicio, dia, hora, onNext, onBack }) {
     if (!nombre.trim() || !telefono.trim()) {
       setError('Completá tu nombre y teléfono para continuar'); return
     }
-    if (telefono.replace(/\D/g,'').length < 10) {
-      setError('Ingresá un número de WhatsApp válido'); return
+    const soloNumeros = telefono.replace(/\D/g,'')
+    if (soloNumeros.length < 10) {
+      setError('Ingresá código de área + número (ej: 2644819470)'); return
     }
     try {
       setLoading(true)
       const fechaHora = `${format(dia,'yyyy-MM-dd')}T${hora}:00`
+      const telefonoCompleto = '54' + soloNumeros
       const res = await turnosAPI.crear({ clienteNombre: nombre.trim(),
-        clienteTelefono: telefono.replace(/\D/g,''), fechaHora, servicio, notas })
+        clienteTelefono: telefonoCompleto, fechaHora, servicio, notas })
       onNext(res.data)
     } catch (e) {
-      setError(e.response?.data?.error || 'Error al reservar. Intentá con otro horario.')
+      setError(e.response?.data?.detail || e.response?.data?.error || 'Error al reservar. Intentá con otro horario.')
     } finally { setLoading(false) }
   }
 
@@ -376,15 +414,24 @@ function PasoDatos({ servicio, dia, hora, onNext, onBack }) {
           </div>
         </div>
         <div>
-          <label style={S.label}>
-            WhatsApp * <span style={{ color:'#E8192C' }}>ej: 5492644123456</span>
-          </label>
-          <div style={{ position:'relative' }}>
-            <Phone size={14} style={{ position:'absolute', left:'12px', top:'50%',
-              transform:'translateY(-50%)', color:'#475569' }}/>
-            <input style={{ ...S.input, paddingLeft:'2.2rem' }}
-              placeholder="5492644123456" type="tel"
-              value={telefono} onChange={e => setTelefono(e.target.value)} />
+          <label style={S.label}>WhatsApp *</label>
+          <div style={{ display:'flex', alignItems:'center', gap:'0' }}>
+            <div style={{
+              background:'rgba(59,130,246,0.08)', border:'1px solid rgba(59,130,246,0.2)',
+              borderRight:'none', borderRadius:'6px 0 0 6px',
+              padding:'0.75rem 0.75rem', color:'#93c5fd',
+              fontFamily:"'Barlow',sans-serif", fontSize:'0.95rem',
+              whiteSpace:'nowrap', userSelect:'none',
+            }}>
+              +54
+            </div>
+            <div style={{ position:'relative', flex:1 }}>
+              <Phone size={14} style={{ position:'absolute', left:'12px', top:'50%',
+                transform:'translateY(-50%)', color:'#475569' }}/>
+              <input style={{ ...S.input, paddingLeft:'2.2rem', borderRadius:'0 6px 6px 0' }}
+                placeholder="2644819470" type="tel"
+                value={telefono} onChange={e => setTelefono(e.target.value)} />
+            </div>
           </div>
         </div>
         <div>
