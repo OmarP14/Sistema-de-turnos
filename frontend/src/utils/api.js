@@ -5,6 +5,27 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' }
 })
 
+// Agrega el token JWT a cada request
+api.interceptors.request.use(config => {
+  const token = localStorage.getItem('barbershop_token')
+  if (token) {
+    config.headers['Authorization'] = `Bearer ${token}`
+  }
+  return config
+})
+
+// Si recibe 401, elimina el token y redirige al login
+api.interceptors.response.use(
+  response => response,
+  error => {
+    if (error.response?.status === 401 || error.response?.status === 403) {
+      localStorage.removeItem('barbershop_token')
+      window.location.href = '/login'
+    }
+    return Promise.reject(error)
+  }
+)
+
 export const turnosAPI = {
   getHoy:      ()       => api.get('/turnos/hoy'),
   getTodos:    ()       => api.get('/turnos'),
@@ -20,6 +41,13 @@ export const turnosAPI = {
 export const configAPI = {
   get:   ()       => api.get('/config'),
   save:  (data)   => api.post('/config', data),
+}
+
+export const disponibilidadAPI = {
+  get:         ()      => api.get('/config/disponibilidad'),
+  updateDias:  (dias)  => api.put('/config/dias-laborales', { dias }),
+  bloquear:    (fecha) => api.post(`/config/bloquear/${fecha}`),
+  desbloquear: (fecha) => api.delete(`/config/bloquear/${fecha}`),
 }
 
 export default api

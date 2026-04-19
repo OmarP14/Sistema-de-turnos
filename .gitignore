@@ -1,0 +1,23 @@
+# Base de datos
+*.db
+*.db-shm
+*.db-wal
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.env
+
+# Node / Frontend
+node_modules/
+dist/
+.vite/
+
+# Java (backend viejo)
+backend/target/
+backend/*.class
+
+# Sistema
+.DS_Store
+Thumbs.db
