@@ -1,34 +1,35 @@
 # 💈 BarbershopNet - App de Turnos con WhatsApp
 
-Stack: **React + Tailwind v3** (frontend) | **Java Spring Boot** (backend) | **SQLite** (DB) | **WhatsApp Business API** (mensajería)
+Stack: **React + Tailwind v3** (frontend) | **Python FastAPI** (backend) | **SQLite** (DB) | **WhatsApp Business API** (mensajería)
 
 ---
 
 ## 🗂️ Estructura del Proyecto
 
 ```
-barbershop/
-├── backend/                    ← Java Spring Boot
-│   ├── pom.xml
-│   └── src/main/
-│       ├── java/com/barbershop/
-│       │   ├── BarbershopApplication.java
-│       │   ├── model/Turno.java
-│       │   ├── repository/TurnoRepository.java
-│       │   ├── service/
-│       │   │   ├── TurnoService.java       ← Lógica de negocio + recordatorios
-│       │   │   └── WhatsAppService.java    ← Integración WhatsApp API
-│       │   └── controller/
-│       │       ├── TurnoController.java    ← REST API
-│       │       └── WhatsAppWebhookController.java
-│       └── resources/
-│           └── application.properties     ← ⚠️ Config con tus tokens
+Sistema-de-turnos/
+├── backend-python/             ← Python FastAPI
+│   ├── main.py                 ← Entrada principal
+│   ├── config.py               ← Configuración (variables de entorno)
+│   ├── database.py             ← Conexión SQLite
+│   ├── models.py               ← Modelos de datos
+│   ├── schemas.py              ← Esquemas Pydantic
+│   ├── requirements.txt        ← Dependencias Python
+│   ├── routers/
+│   │   ├── auth_router.py      ← Autenticación JWT
+│   │   ├── turnos_router.py    ← API de turnos
+│   │   ├── config_router.py    ← Configuración
+│   │   └── webhook_router.py   ← Webhooks de WhatsApp
+│   └── services/
+│       ├── turno_service.py    ← Lógica de turnos + recordatorios
+│       └── whatsapp_service.py ← Integración WhatsApp API
 └── frontend/                   ← React + Tailwind v3
     ├── src/
     │   ├── pages/
     │   │   ├── Dashboard.jsx   ← Turnos de hoy con acciones
     │   │   ├── Agenda.jsx      ← Vista semanal
-    │   │   └── NuevoTurno.jsx  ← Formulario de reserva
+    │   │   ├── NuevoTurno.jsx  ← Formulario de reserva
+    │   │   └── LoginPage.jsx   ← Autenticación
     │   └── utils/api.js        ← Llamadas al backend
     └── package.json
 ```
@@ -39,44 +40,56 @@ barbershop/
 
 | Herramienta | Versión |
 |-------------|---------|
-| Java JDK    | 17+     |
-| Maven       | 3.8+    |
+| Python      | 3.9+    |
 | Node.js     | 18+     |
 | npm         | 9+      |
 
 ---
 
-## 🚀 Ejecutar el Backend (Spring Boot)
+## 🚀 Instalación Rápida
 
+### 1️⃣ Clonar Variables de Entorno
 ```bash
-cd backend
-
-# 1. Compilar
-mvn clean install
-
-# 2. Ejecutar
-mvn spring-boot:run
+cp backend-python/.env.example backend-python/.env
+# Edita el archivo .env con tus credenciales reales de WhatsApp
 ```
 
-El servidor arranca en: **http://localhost:8080**
+### 2️⃣ Ejecutar el Backend (Python FastAPI)
 
-La base de datos `barbershop.db` (SQLite) se crea automáticamente en la raíz del backend.
+```bash
+cd backend-python
+
+# Crear entorno virtual
+python -m venv venv
+source venv/bin/activate  # En Windows: venv\Scripts\activate
+
+# Instalar dependencias
+pip install -r requirements.txt
+
+# Ejecutar servidor
+python main.py
+```
+
+✅ Backend disponible en: **http://localhost:8080**  
+✅ Documentación interactiva (Swagger): **http://localhost:8080/docs**
+
+La base de datos `barbershop.db` (SQLite) se crea automáticamente.
 
 ---
 
-## 🚀 Ejecutar el Frontend (React)
+### 3️⃣ Ejecutar el Frontend (React)
 
 ```bash
 cd frontend
 
-# 1. Instalar dependencias
+# Instalar dependencias
 npm install
 
-# 2. Iniciar en modo desarrollo
+# Iniciar en modo desarrollo
 npm run dev
 ```
 
-La app abre en: **http://localhost:5173**
+✅ Frontend disponible en: **http://localhost:5173**
 
 ---
 
@@ -90,14 +103,22 @@ La app abre en: **http://localhost:5173**
 ### Paso 2 - Obtener credenciales
 Desde el panel de WhatsApp de tu app:
 - `Phone Number ID` → tu número de prueba
-- `Access Token` → token temporal (o permanente con token de sistema)
+- `Access Token` → token de acceso de larga duración
+- Crear un `Verify Token` personalizado
 
-### Paso 3 - Configurar application.properties
+### Paso 3 - Configurar el archivo .env
+Edita `backend-python/.env` con tus datos reales:
 ```properties
-whatsapp.phone.number.id=123456789012345
-whatsapp.access.token=EAABcde...tu_token_largo...
-whatsapp.verify.token=mi_token_secreto_webhook
-barbershop.owner.phone=5492644XXXXXX
+WHATSAPP_PHONE_NUMBER_ID=123456789012345
+WHATSAPP_ACCESS_TOKEN=EAABcde...tu_token_largo...
+WHATSAPP_VERIFY_TOKEN=mi_token_secreto_webhook
+BARBERSHOP_OWNER_PHONE=5492644XXXXXX
+```
+
+### Paso 4 - Configurar el Webhook
+1. En Meta for Developers → Tu App → WhatsApp → Configuración
+2. Agregar URL del webhook: `https://tu-dominio.com/webhook`
+3. Usar el `Verify Token` que estableciste en `.env`
 ```
 
 ### Paso 4 - Configurar Webhook (para mensajes entrantes)
