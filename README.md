@@ -1,78 +1,117 @@
-# 💈 BarbershopNet - App de Turnos con WhatsApp
+# 💈 Luxo BarberApp — Sistema de Turnos
 
-Stack: **React + Tailwind v3** (frontend) | **Java Spring Boot** (backend) | **SQLite** (DB) | **WhatsApp Business API** (mensajería)
+Sistema completo de gestión de turnos para barbería con notificaciones por WhatsApp.
+
+**Stack:** React (frontend) | Python FastAPI (backend) | SQLite (base de datos) | WhatsApp Business API
+
+---
+
+## ✨ Funcionalidades
+
+### Panel del Barbero
+- **Dashboard** con todos los turnos próximos (pendientes, confirmados, completados, cancelados)
+- **Agenda semanal** con navegación por días
+- **Confirmar, cancelar y completar** turnos desde el panel
+- **Historial** de todos los turnos
+- **Búsqueda** por nombre, teléfono o servicio
+- **Configuración** de días laborales y fechas bloqueadas
+- **Login con contraseña** para acceso protegido
+- **Actualización automática** cada 30 segundos
+
+### Reserva para Clientes (pública)
+- Selección de **servicio** (corte, barba, degradé, etc.)
+- Selección de **día disponible** según configuración del barbero
+- Selección de **horario disponible** (09:00 a 19:00 cada 30 min)
+- Ingreso de **nombre y WhatsApp**
+- Prefijo `+54` predeterminado para Argentina
+
+### Notificaciones WhatsApp automáticas
+- **Al barbero** cuando se crea un turno nuevo (con opción de confirmar/cancelar por WhatsApp)
+- **Al cliente** cuando el barbero confirma el turno
+- **Al barbero** recordatorio automático 1 hora antes del turno
+- Procesamiento de respuestas: `SI 5` confirma, `NO 5` cancela
+
+### Instalable como PWA
+- Se puede agregar a la pantalla de inicio del celular
+- Funciona como app nativa en Android e iOS
 
 ---
 
 ## 🗂️ Estructura del Proyecto
 
 ```
-barbershop/
-├── backend/                    ← Java Spring Boot
-│   ├── pom.xml
-│   └── src/main/
-│       ├── java/com/barbershop/
-│       │   ├── BarbershopApplication.java
-│       │   ├── model/Turno.java
-│       │   ├── repository/TurnoRepository.java
-│       │   ├── service/
-│       │   │   ├── TurnoService.java       ← Lógica de negocio + recordatorios
-│       │   │   └── WhatsAppService.java    ← Integración WhatsApp API
-│       │   └── controller/
-│       │       ├── TurnoController.java    ← REST API
-│       │       └── WhatsAppWebhookController.java
-│       └── resources/
-│           └── application.properties     ← ⚠️ Config con tus tokens
-└── frontend/                   ← React + Tailwind v3
+TURNOS/
+├── backend-python/             ← API Python FastAPI
+│   ├── main.py                 ← Punto de entrada
+│   ├── config.py               ← Configuración y credenciales
+│   ├── database.py             ← Conexión SQLite
+│   ├── models.py               ← Modelos SQLAlchemy
+│   ├── schemas.py              ← Schemas Pydantic
+│   ├── auth.py                 ← JWT autenticación
+│   ├── scheduler.py            ← Recordatorios automáticos
+│   ├── requirements.txt        ← Dependencias Python
+│   ├── routers/
+│   │   ├── auth_router.py      ← POST /api/auth/login
+│   │   ├── turnos_router.py    ← /api/turnos/*
+│   │   ├── config_router.py    ← /api/config/*
+│   │   └── webhook_router.py   ← /webhook
+│   └── services/
+│       ├── turno_service.py    ← Lógica de negocio
+│       └── whatsapp_service.py ← Integración WhatsApp API
+└── frontend/                   ← React
     ├── src/
     │   ├── pages/
-    │   │   ├── Dashboard.jsx   ← Turnos de hoy con acciones
+    │   │   ├── Dashboard.jsx   ← Turnos próximos con acciones
     │   │   ├── Agenda.jsx      ← Vista semanal
-    │   │   └── NuevoTurno.jsx  ← Formulario de reserva
+    │   │   ├── Reservar.jsx    ← Formulario público del cliente
+    │   │   ├── Historial.jsx   ← Historial de turnos
+    │   │   ├── Configuracion.jsx ← Config del barbero
+    │   │   └── LoginPage.jsx   ← Login del barbero
+    │   ├── components/
+    │   │   ├── BotonesAccion.jsx
+    │   │   └── PrivateRoute.jsx
     │   └── utils/api.js        ← Llamadas al backend
-    └── package.json
+    └── public/
+        └── manifest.json       ← Config PWA
 ```
 
 ---
 
-## ⚙️ Requisitos Previos
+## ⚙️ Requisitos
 
 | Herramienta | Versión |
 |-------------|---------|
-| Java JDK    | 17+     |
-| Maven       | 3.8+    |
+| Python      | 3.10+   |
 | Node.js     | 18+     |
 | npm         | 9+      |
 
 ---
 
-## 🚀 Ejecutar el Backend (Spring Boot)
+## 🚀 Instalación y Ejecución
+
+### Backend Python
 
 ```bash
-cd backend
+cd backend-python
 
-# 1. Compilar
-mvn clean install
+# Instalar dependencias
+pip install -r requirements.txt
 
-# 2. Ejecutar
-mvn spring-boot:run
+# Ejecutar
+python main.py
 ```
 
 El servidor arranca en: **http://localhost:8080**
 
-La base de datos `barbershop.db` (SQLite) se crea automáticamente en la raíz del backend.
-
----
-
-## 🚀 Ejecutar el Frontend (React)
+### Frontend React
 
 ```bash
 cd frontend
 
-# 1. Instalar dependencias
+# Instalar dependencias
 npm install
 
-# 2. Iniciar en modo desarrollo
+# Iniciar en modo desarrollo
 npm run dev
 ```
 
@@ -80,86 +119,74 @@ La app abre en: **http://localhost:5173**
 
 ---
 
-## 📱 Configurar WhatsApp Business API
+## 🔐 Accesos
 
-### Paso 1 - Crear cuenta en Meta for Developers
-1. Ir a https://developers.facebook.com
-2. Crear app → Tipo: Business
-3. Agregar producto: **WhatsApp**
-
-### Paso 2 - Obtener credenciales
-Desde el panel de WhatsApp de tu app:
-- `Phone Number ID` → tu número de prueba
-- `Access Token` → token temporal (o permanente con token de sistema)
-
-### Paso 3 - Configurar application.properties
-```properties
-whatsapp.phone.number.id=123456789012345
-whatsapp.access.token=EAABcde...tu_token_largo...
-whatsapp.verify.token=mi_token_secreto_webhook
-barbershop.owner.phone=5492644XXXXXX
-```
-
-### Paso 4 - Configurar Webhook (para mensajes entrantes)
-- URL pública necesaria → usar **ngrok** en desarrollo:
-```bash
-ngrok http 8080
-# Pegar la URL en Meta: https://xxxx.ngrok.io/webhook
-```
+| Rol | URL | Credenciales |
+|-----|-----|--------------|
+| Barbero | `/login` | admin / quepelo2025 |
+| Cliente | `/reservar` | Sin login |
 
 ---
 
-## 📡 API REST - Endpoints
+## 📡 API REST — Endpoints
 
-| Método | Endpoint | Descripción |
-|--------|----------|-------------|
-| GET    | /api/turnos | Todos los turnos |
-| GET    | /api/turnos/hoy | Turnos de hoy |
-| GET    | /api/turnos/dia?fecha= | Turnos de un día |
-| POST   | /api/turnos | Crear turno |
-| PUT    | /api/turnos/{id}/confirmar | Confirmar (envía WhatsApp al cliente) |
-| PUT    | /api/turnos/{id}/cancelar | Cancelar turno |
-| PUT    | /api/turnos/{id}/completar | Marcar como completado |
-| GET    | /webhook | Verificación webhook Meta |
-| POST   | /webhook | Recibir mensajes entrantes |
+| Método | Endpoint | Auth | Descripción |
+|--------|----------|------|-------------|
+| POST | `/api/auth/login` | No | Login barbero |
+| GET | `/api/config/disponibilidad` | No | Días y fechas disponibles |
+| PUT | `/api/config/dias-laborales` | Sí | Actualizar días de trabajo |
+| POST | `/api/config/bloquear/{fecha}` | Sí | Bloquear una fecha |
+| DELETE | `/api/config/bloquear/{fecha}` | Sí | Desbloquear una fecha |
+| GET | `/api/turnos` | Sí | Todos los turnos |
+| GET | `/api/turnos/hoy` | Sí | Turnos de hoy |
+| GET | `/api/turnos/dia?fecha=` | Sí | Turnos de un día |
+| GET | `/api/turnos/ocupados?fecha=` | No | Horarios ocupados |
+| GET | `/api/turnos/buscar?q=` | Sí | Buscar turnos |
+| POST | `/api/turnos` | No | Crear turno (cliente) |
+| PUT | `/api/turnos/{id}/confirmar` | Sí | Confirmar turno |
+| PUT | `/api/turnos/{id}/cancelar` | Sí | Cancelar turno |
+| PUT | `/api/turnos/{id}/completar` | Sí | Completar turno |
+| GET | `/webhook` | No | Verificación Meta |
+| POST | `/webhook` | No | Mensajes entrantes WhatsApp |
 
 ---
 
-## 💬 Flujo WhatsApp
+## 💬 Flujo de Mensajes WhatsApp
 
 ```
 Cliente reserva turno
         ↓
-[Backend] notificarPeluquero() → WhatsApp al peluquero
+WhatsApp al barbero con datos del turno
+(responder SI 5 para confirmar / NO 5 para cancelar)
         ↓
-Peluquero confirma desde el panel
+Barbero confirma desde el panel
         ↓
-[Backend] enviarConfirmacionTurno() → WhatsApp al cliente
+WhatsApp al cliente con confirmación
         ↓
-1 hora antes del turno (automático)
+1 hora antes (automático cada 15 min)
         ↓
-[Backend @Scheduled] enviarRecordatorio() → WhatsApp al cliente
+WhatsApp recordatorio al barbero
 ```
 
 ---
 
-## 🔧 Números de Teléfono - Formato Argentina
+## 📱 Formato de teléfono Argentina
 
-WhatsApp requiere formato internacional sin el +:
 ```
-549 + código de área sin 0 + número
-Ejemplo San Juan: 5492644XXXXXX
+54 + código de área + número (sin 0 ni 15)
+Ejemplo: 542644819470
 ```
 
 ---
 
-## 📦 Build para Producción
+## 📦 Dependencias Python
 
-```bash
-# Frontend
-cd frontend && npm run build  # genera carpeta dist/
-
-# Backend (JAR ejecutable)
-cd backend && mvn package
-java -jar target/barbershop-api-1.0.0.jar
+```
+fastapi
+uvicorn
+sqlalchemy
+pyjwt
+requests
+apscheduler
+python-multipart
 ```
