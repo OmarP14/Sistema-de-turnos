@@ -94,6 +94,10 @@ TURNOS/
 ```bash
 cd backend-python
 
+# Copiar y completar variables de entorno
+cp .env.example .env
+# Editar .env con contraseña admin, JWT_SECRET y credenciales WhatsApp
+
 # Instalar dependencias
 pip install -r requirements.txt
 
@@ -113,6 +117,49 @@ npm install
 
 # Iniciar en modo desarrollo
 npm run dev
+
+# Build de producción
+npm run build
+# Los archivos quedan en frontend/dist/ — servir con nginx o similar
+```
+
+---
+
+## 🌐 Deploy en producción
+
+### Variables de entorno del backend (`.env`)
+
+```env
+PORT=8080
+CORS_ORIGINS=https://tudominio.com
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=contraseña_segura
+JWT_SECRET=clave_secreta_larga_y_aleatoria
+WHATSAPP_VERIFY_TOKEN=token_personalizado
+```
+
+### Variable de entorno del frontend (`.env`)
+
+```env
+VITE_API_URL=https://tudominio.com/api
+```
+
+### Nginx (ejemplo)
+
+```nginx
+# Frontend (archivos estáticos)
+location / {
+    root /var/www/barbershop/frontend/dist;
+    try_files $uri $uri/ /index.html;
+}
+
+# Backend (proxy)
+location /api {
+    proxy_pass http://localhost:8080;
+}
+location /webhook {
+    proxy_pass http://localhost:8080;
+}
 ```
 
 La app abre en: **http://localhost:5173**

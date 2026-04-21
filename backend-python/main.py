@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 from database import Base, engine
 from routers import auth_router, turnos_router, config_router, webhook_router
 import scheduler
-from config import PORT
+from config import PORT, CORS_ORIGINS
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s - %(name)s - %(message)s")
 
@@ -42,7 +42,7 @@ app = FastAPI(title="Barbershop API", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=CORS_ORIGINS,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )

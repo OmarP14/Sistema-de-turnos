@@ -7,8 +7,12 @@ export default defineConfig({
     port: 5173,
     host: true,
     proxy: {
-      '/api': 'http://localhost:8080',
+      '/api':     'http://localhost:8080',
       '/webhook': 'http://localhost:8080',
     }
+  },
+  build: {
+    outDir: 'dist',
+    sourcemap: false,
   }
 })
