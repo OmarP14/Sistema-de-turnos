@@ -177,9 +177,12 @@ export default function Configuracion() {
     }
   }
 
-  // Próximos 60 días que sean días laborales
-  const proximosDias = Array.from({ length: 60 }, (_, i) => addDays(startOfToday(), i + 1))
-    .filter(d => diasLaborales.includes(d.getDay()))
+  const hoy = startOfToday()
+  // 3 meses: actual + siguientes 2
+  const mesesCalendario = Array.from({ length: 3 }, (_, i) => {
+    const d = new Date(hoy.getFullYear(), hoy.getMonth() + i, 1)
+    return d
+  })
 
   return (
     <div style={{ maxWidth:'600px', margin:'0 auto', display:'flex', flexDirection:'column',
@@ -299,80 +302,130 @@ export default function Configuracion() {
           )}
         </div>
 
-        {proximosDias.length === 0 ? (
-          <p style={{ color:'#475569', fontFamily:"'Barlow',sans-serif", fontSize:'0.82rem' }}>
-            No hay días laborales activos para bloquear.
-          </p>
-        ) : (
-          <div style={{ display:'flex', flexDirection:'column', gap:'1.25rem' }}>
-            {Object.entries(
-              proximosDias.reduce((acc, dia) => {
-                const mes = format(dia, 'MMMM yyyy', { locale: es })
-                if (!acc[mes]) acc[mes] = []
-                acc[mes].push(dia)
-                return acc
-              }, {})
-            ).map(([mes, dias]) => (
-              <div key={mes}>
+        <div style={{ display:'flex', flexDirection:'column', gap:'1.5rem' }}>
+          {mesesCalendario.map(primerDia => {
+            const año = primerDia.getFullYear()
+            const mes = primerDia.getMonth()
+            const diasEnMes = new Date(año, mes + 1, 0).getDate()
+            // offset lunes=0 … domingo=6
+            const offset = (primerDia.getDay() + 6) % 7
+
+            return (
+              <div key={`${año}-${mes}`}>
+                {/* Encabezado del mes */}
                 <div style={{
-                  fontFamily:"'Oswald',sans-serif", fontSize:'0.72rem',
-                  letterSpacing:'0.14em', textTransform:'uppercase',
-                  color:'#64748b', marginBottom:'8px',
-                  borderBottom:'1px solid #1a1a1a', paddingBottom:'6px',
+                  fontFamily:"'Bebas Neue',cursive", fontSize:'1.1rem',
+                  letterSpacing:'0.1em', color:'#F8F8F8',
+                  borderBottom:'1px solid #1a1a1a', paddingBottom:'6px', marginBottom:'8px',
+                  textTransform:'capitalize',
                 }}>
-                  {mes}
+                  {format(primerDia, 'MMMM yyyy', { locale: es })}
                 </div>
-                <div style={{ display:'grid', gridTemplateColumns:'repeat(5,1fr)', gap:'6px' }}>
-                  {dias.map(dia => {
+
+                {/* Grilla 7 columnas */}
+                <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', gap:'4px' }}>
+
+                  {/* Cabecera días de la semana */}
+                  {['L','M','X','J','V','S','D'].map(d => (
+                    <div key={d} style={{
+                      textAlign:'center', fontFamily:"'Oswald',sans-serif",
+                      fontSize:'0.6rem', letterSpacing:'0.12em',
+                      color:'#334155', paddingBottom:'4px',
+                    }}>{d}</div>
+                  ))}
+
+                  {/* Celdas vacías hasta el primer día */}
+                  {Array.from({ length: offset }, (_, i) => (
+                    <div key={`e${i}`} />
+                  ))}
+
+                  {/* Días del mes */}
+                  {Array.from({ length: diasEnMes }, (_, i) => {
+                    const dia = new Date(año, mes, i + 1)
                     const fechaStr = format(dia, 'yyyy-MM-dd')
+                    const esPasado = dia < hoy
+                    const esHoy = fechaStr === format(hoy, 'yyyy-MM-dd')
+                    const esDiaLaboral = diasLaborales.includes(dia.getDay())
                     const bloqueado = fechasBloqueadas.includes(fechaStr)
-                    const diaNombre = format(dia, 'EEE', { locale: es }).toUpperCase().replace('.','')
+                    const clickeable = !esPasado && esDiaLaboral
+
+                    let bg = 'transparent'
+                    let border = '1px solid transparent'
+                    let color = '#1e293b'
+
+                    if (esPasado) {
+                      color = '#1e293b'
+                    } else if (bloqueado) {
+                      bg = 'rgba(232,25,44,0.15)'
+                      border = '1px solid rgba(232,25,44,0.4)'
+                      color = '#fb7185'
+                    } else if (esHoy) {
+                      bg = 'rgba(59,130,246,0.12)'
+                      border = '1px solid rgba(59,130,246,0.35)'
+                      color = '#93c5fd'
+                    } else if (esDiaLaboral) {
+                      bg = 'rgba(255,255,255,0.03)'
+                      border = '1px solid #1a1a1a'
+                      color = '#F8F8F8'
+                    }
+
                     return (
                       <button
                         key={fechaStr}
-                        onClick={() => toggleFecha(fechaStr)}
-                        title={bloqueado ? 'Click para desbloquear' : 'Click para bloquear'}
+                        disabled={!clickeable}
+                        onClick={() => clickeable && toggleFecha(fechaStr)}
+                        title={
+                          esPasado ? '' :
+                          !esDiaLaboral ? 'Día no laboral' :
+                          bloqueado ? 'Click para desbloquear' : 'Click para bloquear'
+                        }
                         style={{
-                          padding:'8px 4px', borderRadius:'6px',
-                          border: bloqueado ? '1px solid rgba(232,25,44,0.5)' : '1px solid #1a1a1a',
-                          background: bloqueado ? 'rgba(232,25,44,0.12)' : 'rgba(255,255,255,0.03)',
-                          cursor:'pointer', display:'flex', flexDirection:'column',
-                          alignItems:'center', gap:'2px', position:'relative', transition:'all 0.15s',
+                          position:'relative', padding:'6px 2px',
+                          borderRadius:'6px', border, background: bg,
+                          cursor: clickeable ? 'pointer' : 'default',
+                          display:'flex', flexDirection:'column',
+                          alignItems:'center', gap:'1px',
+                          transition:'all 0.15s',
                         }}
                       >
-                        {bloqueado && (
-                          <div style={{
-                            position:'absolute', top:'3px', right:'3px',
-                            background:'#E8192C', borderRadius:'50%',
-                            width:'12px', height:'12px',
-                            display:'flex', alignItems:'center', justifyContent:'center',
-                          }}>
-                            <X size={8} style={{ color:'#fff' }} />
-                          </div>
-                        )}
-                        <span style={{ fontFamily:"'Oswald',sans-serif", fontSize:'0.55rem',
-                          letterSpacing:'0.1em', color: bloqueado ? '#E8192C' : '#475569' }}>
-                          {diaNombre}
+                        <span style={{
+                          fontFamily:"'Bebas Neue',cursive", fontSize:'1.1rem',
+                          lineHeight:1, color,
+                        }}>
+                          {i + 1}
                         </span>
-                        <span style={{ fontFamily:"'Bebas Neue',cursive", fontSize:'1.2rem',
-                          lineHeight:1, color: bloqueado ? '#fb7185' : '#F8F8F8' }}>
-                          {format(dia, 'd')}
-                        </span>
-                        {bloqueado && (
-                          <span style={{ fontFamily:"'Oswald',sans-serif", fontSize:'0.45rem',
-                            letterSpacing:'0.06em', color:'#E8192C', marginTop:'1px' }}>
-                            BLOQ
-                          </span>
+                        {bloqueado && !esPasado && (
+                          <span style={{
+                            fontFamily:"'Oswald',sans-serif", fontSize:'0.4rem',
+                            letterSpacing:'0.06em', color:'#E8192C',
+                          }}>BLOQ</span>
                         )}
                       </button>
                     )
                   })}
                 </div>
               </div>
-            ))}
-          </div>
-        )}
+            )
+          })}
+        </div>
 
+        {/* Leyenda */}
+        <div style={{ display:'flex', flexWrap:'wrap', gap:'10px' }}>
+          {[
+            { bg:'rgba(255,255,255,0.03)', border:'1px solid #1a1a1a', color:'#F8F8F8', label:'Disponible' },
+            { bg:'rgba(232,25,44,0.15)',   border:'1px solid rgba(232,25,44,0.4)', color:'#fb7185', label:'Bloqueado' },
+            { bg:'rgba(59,130,246,0.12)',  border:'1px solid rgba(59,130,246,0.35)', color:'#93c5fd', label:'Hoy' },
+            { bg:'transparent', border:'1px solid transparent', color:'#1e293b', label:'No laboral / pasado' },
+          ].map(l => (
+            <div key={l.label} style={{ display:'flex', alignItems:'center', gap:'5px' }}>
+              <div style={{ width:'16px', height:'16px', borderRadius:'4px',
+                background:l.bg, border:l.border }} />
+              <span style={{ fontFamily:"'Barlow',sans-serif", fontSize:'0.7rem', color:'#475569' }}>
+                {l.label}
+              </span>
+            </div>
+          ))}
+        </div>
         {fechasBloqueadas.length > 0 && (
           <p style={{ fontFamily:"'Barlow',sans-serif", fontSize:'0.75rem', color:'#64748b', margin:0 }}>
             {fechasBloqueadas.length} día{fechasBloqueadas.length > 1 ? 's' : ''} bloqueado{fechasBloqueadas.length > 1 ? 's' : ''}
