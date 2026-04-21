@@ -12,6 +12,23 @@ logging.basicConfig(level=logging.INFO, format="%(levelname)s - %(name)s - %(mes
 
 Base.metadata.create_all(bind=engine)
 
+# SQLite migration: add columns added after initial schema creation
+def _migrate():
+    from sqlalchemy import text
+    with engine.connect() as conn:
+        cols = {row[1] for row in conn.execute(text("PRAGMA table_info(config_barbershop)"))}
+        for col, ddl in [
+            ("barbershop_name", "TEXT"),
+            ("owner_phone", "TEXT"),
+            ("whatsapp_phone_number_id", "TEXT"),
+            ("whatsapp_access_token", "TEXT"),
+        ]:
+            if col not in cols:
+                conn.execute(text(f"ALTER TABLE config_barbershop ADD COLUMN {col} {ddl}"))
+        conn.commit()
+
+_migrate()
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

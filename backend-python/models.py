@@ -22,6 +22,10 @@ class ConfigBarbershop(Base):
 
     id = Column(Integer, primary_key=True)
     dias_laborales = Column(String, default="1,2,3,4,5,6")
+    barbershop_name = Column(String, nullable=True)
+    owner_phone = Column(String, nullable=True)
+    whatsapp_phone_number_id = Column(String, nullable=True)
+    whatsapp_access_token = Column(String, nullable=True)
 
 
 class FechaBloqueada(Base):

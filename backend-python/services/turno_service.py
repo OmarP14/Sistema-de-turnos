@@ -2,10 +2,14 @@ import logging
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, func as sqlfunc
-from models import Turno
+from models import Turno, ConfigBarbershop
 from schemas import TurnoCreate
 from services import whatsapp_service
-from config import BARBERSHOP_OWNER_PHONE
+from services.whatsapp_service import WAConfig
+from config import (
+    WHATSAPP_PHONE_NUMBER_ID, WHATSAPP_ACCESS_TOKEN,
+    BARBERSHOP_NAME, BARBERSHOP_OWNER_PHONE,
+)
 
 log = logging.getLogger(__name__)
 FORMATTER = "%d/%m/%Y %H:%M"
@@ -13,6 +17,20 @@ FORMATTER = "%d/%m/%Y %H:%M"
 
 def _fmt(dt: datetime) -> str:
     return dt.strftime(FORMATTER)
+
+
+def _wa_cfg(db: Session) -> WAConfig:
+    cfg = db.query(ConfigBarbershop).filter(ConfigBarbershop.id == 1).first()
+    return WAConfig(
+        phone_number_id=(cfg.whatsapp_phone_number_id if cfg and cfg.whatsapp_phone_number_id
+                         else WHATSAPP_PHONE_NUMBER_ID),
+        access_token=(cfg.whatsapp_access_token if cfg and cfg.whatsapp_access_token
+                      else WHATSAPP_ACCESS_TOKEN),
+        barbershop_name=(cfg.barbershop_name if cfg and cfg.barbershop_name
+                         else BARBERSHOP_NAME),
+        owner_phone=(cfg.owner_phone if cfg and cfg.owner_phone
+                     else BARBERSHOP_OWNER_PHONE),
+    )
 
 
 def crear_turno(db: Session, data: TurnoCreate) -> Turno:
@@ -39,8 +57,9 @@ def crear_turno(db: Session, data: TurnoCreate) -> Turno:
     db.commit()
     db.refresh(turno)
 
+    wa = _wa_cfg(db)
     whatsapp_service.notificar_peluquero(
-        BARBERSHOP_OWNER_PHONE, turno.id,
+        wa, turno.id,
         turno.cliente_nombre, turno.cliente_telefono,
         _fmt(turno.fecha_hora), turno.servicio or "",
     )
@@ -53,8 +72,9 @@ def confirmar_turno(db: Session, turno_id: int) -> Turno:
     turno.estado = "CONFIRMADO"
     db.commit()
     db.refresh(turno)
+    wa = _wa_cfg(db)
     whatsapp_service.enviar_confirmacion(
-        turno.cliente_telefono, turno.cliente_nombre,
+        wa, turno.cliente_telefono, turno.cliente_nombre,
         _fmt(turno.fecha_hora), turno.servicio or "",
     )
     return turno
@@ -65,8 +85,9 @@ def cancelar_turno(db: Session, turno_id: int) -> Turno:
     turno.estado = "CANCELADO"
     db.commit()
     db.refresh(turno)
+    wa = _wa_cfg(db)
     whatsapp_service.enviar_cancelacion(
-        turno.cliente_telefono, turno.cliente_nombre, _fmt(turno.fecha_hora)
+        wa, turno.cliente_telefono, turno.cliente_nombre, _fmt(turno.fecha_hora)
     )
     return turno
 
@@ -115,9 +136,9 @@ def buscar(db: Session, q: str) -> list[Turno]:
         db.query(Turno)
         .filter(
             or_(
-                func.lower(Turno.cliente_nombre).like(like),
+                sqlfunc.lower(Turno.cliente_nombre).like(like),
                 Turno.cliente_telefono.like(f"%{q}%"),
-                func.lower(Turno.servicio).like(like),
+                sqlfunc.lower(Turno.servicio).like(like),
             )
         )
         .order_by(Turno.fecha_hora.desc())
@@ -146,10 +167,13 @@ def enviar_recordatorios(db: Session):
         )
         .all()
     )
+    if not turnos:
+        return
+    wa = _wa_cfg(db)
     for turno in turnos:
         try:
             whatsapp_service.enviar_recordatorio_peluquero(
-                BARBERSHOP_OWNER_PHONE, turno.id,
+                wa, turno.id,
                 turno.cliente_nombre, turno.cliente_telefono,
                 _fmt(turno.fecha_hora), turno.servicio or ""
             )

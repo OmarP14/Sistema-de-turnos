@@ -48,3 +48,10 @@ class DiasLaboralesRequest(BaseModel):
 class DisponibilidadResponse(BaseModel):
     diasLaborales: list[int]
     fechasBloqueadas: list[str]
+
+
+class BarberiaConfig(BaseModel):
+    barbershop_name: Optional[str] = None
+    owner_phone: Optional[str] = None
+    whatsapp_phone_number_id: Optional[str] = None
+    whatsapp_access_token: Optional[str] = None

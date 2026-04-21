@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Save, CheckCircle, X } from 'lucide-react'
 import { addDays, startOfToday, format } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { disponibilidadAPI } from '../utils/api'
+import { disponibilidadAPI, barberiaAPI } from '../utils/api'
 
 const SERVICIOS_DEFAULT = ['Corte de pelo','Barba','Corte + Barba','Degradé','Coloración']
 
@@ -34,7 +34,6 @@ const Section = ({ title, children }) => (
 export default function Configuracion() {
   const [guardado, setGuardado] = useState(false)
   const [config, setConfig] = useState({
-    barbershopName:'El Maestro', ownerPhone:'',
     horarios:{ inicio:'09:00', fin:'19:00', duracion:30 },
     servicios:SERVICIOS_DEFAULT, nuevoServicio:'',
   })
@@ -44,6 +43,14 @@ export default function Configuracion() {
   const [fechasBloqueadas, setFechasBloqueadas] = useState([])
   const [guardandoDias, setGuardandoDias] = useState(false)
   const [mensajeDias, setMensajeDias] = useState('')
+
+  // Configuración de la barbería (viene del backend)
+  const [barberia, setBarberia] = useState({
+    barbershop_name: '', owner_phone: '',
+    whatsapp_phone_number_id: '', whatsapp_access_token: '',
+  })
+  const [guardandoBarberia, setGuardandoBarberia] = useState(false)
+  const [mensajeBarberia, setMensajeBarberia] = useState('')
 
   // Cargar config local
   useEffect(() => {
@@ -62,6 +69,27 @@ export default function Configuracion() {
       })
       .catch(() => {})
   }, [])
+
+  // Cargar config de barbería del backend
+  useEffect(() => {
+    barberiaAPI.get()
+      .then(res => setBarberia(prev => ({ ...prev, ...res.data })))
+      .catch(() => {})
+  }, [])
+
+  const guardarBarberia = async () => {
+    setGuardandoBarberia(true)
+    try {
+      await barberiaAPI.save(barberia)
+      setMensajeBarberia('ok')
+      setTimeout(() => setMensajeBarberia(''), 2500)
+    } catch {
+      setMensajeBarberia('error')
+      setTimeout(() => setMensajeBarberia(''), 2500)
+    } finally {
+      setGuardandoBarberia(false)
+    }
+  }
 
   // ── Config local ───────────────────────────────────────────────────────────
   const set  = (k,v) => setConfig(f => ({ ...f, [k]:v }))
@@ -84,7 +112,7 @@ export default function Configuracion() {
   })()
 
   const guardar = () => {
-    const { nuevoServicio, ...d } = config
+    const { nuevoServicio: _, ...d } = config
     localStorage.setItem('barbershop_config', JSON.stringify(d))
     setGuardado(true)
     setTimeout(() => setGuardado(false), 2500)
@@ -144,14 +172,43 @@ export default function Configuracion() {
           letterSpacing:'0.05em' }}>CONFIGURACIÓN</h2>
       </div>
 
-      {/* ── Datos de la Barbería ── */}
-      <Section title="Datos de la Barbería">
-        <div><Label>Nombre</Label>
-          <input className="input-field" placeholder="Ej: Barbería El Maestro"
-            value={config.barbershopName} onChange={e => set('barbershopName', e.target.value)} /></div>
-        <div><Label>Teléfono del peluquero (WhatsApp)</Label>
-          <input className="input-field" placeholder="5492644123456"
-            value={config.ownerPhone} onChange={e => set('ownerPhone', e.target.value)} /></div>
+      {/* ── Configuración WhatsApp ── */}
+      <Section title="Barbería y WhatsApp">
+        <p style={{ fontFamily:"'Barlow',sans-serif", fontSize:'0.8rem', color:'#64748b', margin:0 }}>
+          Ingresá los datos de tu cuenta de WhatsApp Business. Se obtienen desde Meta for Developers.
+        </p>
+        <div><Label>Nombre de la Barbería</Label>
+          <input className="input-field" placeholder="Ej: Luxo Barbershop"
+            value={barberia.barbershop_name || ''}
+            onChange={e => setBarberia(p => ({ ...p, barbershop_name: e.target.value }))} /></div>
+        <div><Label>Teléfono del Barbero (WhatsApp) — sin + ni espacios</Label>
+          <input className="input-field" placeholder="542644819470"
+            value={barberia.owner_phone || ''}
+            onChange={e => setBarberia(p => ({ ...p, owner_phone: e.target.value }))} /></div>
+        <div><Label>WhatsApp Phone Number ID</Label>
+          <input className="input-field" placeholder="Ej: 969778306228834"
+            value={barberia.whatsapp_phone_number_id || ''}
+            onChange={e => setBarberia(p => ({ ...p, whatsapp_phone_number_id: e.target.value }))} /></div>
+        <div><Label>WhatsApp Access Token</Label>
+          <textarea className="input-field" rows={3}
+            placeholder="EAADvvm..."
+            style={{ resize:'vertical', fontFamily:'monospace', fontSize:'0.72rem' }}
+            value={barberia.whatsapp_access_token || ''}
+            onChange={e => setBarberia(p => ({ ...p, whatsapp_access_token: e.target.value }))} /></div>
+        <button
+          onClick={guardarBarberia}
+          disabled={guardandoBarberia}
+          className="btn-primary"
+          style={{ alignSelf:'flex-start' }}
+        >
+          {guardandoBarberia ? 'Guardando…'
+            : mensajeBarberia === 'ok' ? <><CheckCircle size={14}/> GUARDADO</>
+            : mensajeBarberia === 'error' ? '✕ Error al guardar'
+            : <><Save size={14}/> GUARDAR WHATSAPP</>}
+        </button>
+        <p style={{ fontFamily:"'Barlow',sans-serif", fontSize:'0.72rem', color:'#475569', margin:0 }}>
+          El token expira cada ~24 h. Renovarlo en Meta for Developers → WhatsApp → API Setup.
+        </p>
       </Section>
 
       {/* ── Días de Trabajo ── */}

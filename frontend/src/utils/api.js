@@ -38,9 +38,9 @@ export const turnosAPI = {
   completar:   (id)     => api.put(`/turnos/${id}/completar`),
 }
 
-export const configAPI = {
-  get:   ()       => api.get('/config'),
-  save:  (data)   => api.post('/config', data),
+export const barberiaAPI = {
+  get:  ()     => api.get('/config/barberia'),
+  save: (data) => api.put('/config/barberia', data),
 }
 
 export const disponibilidadAPI = {
