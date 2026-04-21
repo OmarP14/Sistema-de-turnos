@@ -34,7 +34,6 @@ const Section = ({ title, children }) => (
 export default function Configuracion() {
   const [guardado, setGuardado] = useState(false)
   const [config, setConfig] = useState({
-    horarios:{ inicio:'09:00', fin:'19:00', duracion:30 },
     servicios:SERVICIOS_DEFAULT, nuevoServicio:'',
   })
 
@@ -93,23 +92,12 @@ export default function Configuracion() {
 
   // ── Config local ───────────────────────────────────────────────────────────
   const set  = (k,v) => setConfig(f => ({ ...f, [k]:v }))
-  const setH = (k,v) => setConfig(f => ({ ...f, horarios:{ ...f.horarios, [k]:v } }))
   const addSvc = () => {
     if (!config.nuevoServicio.trim()) return
     set('servicios', [...config.servicios, config.nuevoServicio.trim()])
     set('nuevoServicio', '')
   }
   const delSvc = (i) => set('servicios', config.servicios.filter((_,j) => j !== i))
-
-  const slots = (() => {
-    const [hI,mI] = config.horarios.inicio.split(':').map(Number)
-    const [hF,mF] = config.horarios.fin.split(':').map(Number)
-    const dur = parseInt(config.horarios.duracion), ini = hI*60+mI, fin = hF*60+mF, r = []
-    for (let t = ini; t < fin; t += dur) {
-      r.push(`${Math.floor(t/60).toString().padStart(2,'0')}:${(t%60).toString().padStart(2,'0')}`)
-    }
-    return r
-  })()
 
   const guardar = () => {
     const { nuevoServicio: _, ...d } = config
@@ -334,28 +322,25 @@ export default function Configuracion() {
 
       {/* ── Horario de Atención ── */}
       <Section title="Horario de Atención">
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:'10px' }}>
-          <div><Label>Apertura</Label>
-            <input type="time" className="input-field" value={config.horarios.inicio}
-              onChange={e => setH('inicio', e.target.value)} /></div>
-          <div><Label>Cierre</Label>
-            <input type="time" className="input-field" value={config.horarios.fin}
-              onChange={e => setH('fin', e.target.value)} /></div>
-          <div><Label>Duración</Label>
-            <select className="input-field" value={config.horarios.duracion}
-              onChange={e => setH('duracion', e.target.value)}>
-              {[15,20,30,45,60].map(m => <option key={m} value={m}>{m} min</option>)}
-            </select></div>
-        </div>
-        <div>
-          <Label>Vista previa de horarios</Label>
-          <div style={{ display:'flex', flexWrap:'wrap', gap:'4px' }}>
-            {slots.map(h => (
-              <span key={h} style={{ background:'rgba(232,25,44,0.08)', color:'#E8192C',
-                border:'1px solid rgba(232,25,44,0.2)', padding:'2px 8px', borderRadius:'2px',
-                fontSize:'0.7rem', fontFamily:"'Oswald',sans-serif", letterSpacing:'0.05em' }}>{h}</span>
-            ))}
-          </div>
+        <p style={{ fontFamily:"'Barlow',sans-serif", fontSize:'0.8rem', color:'#64748b', margin:0 }}>
+          Turnos cada 30 minutos en dos franjas horarias.
+        </p>
+        <div style={{ display:'flex', flexDirection:'column', gap:'8px' }}>
+          {[
+            { label:'Mañana', slots:['09:00','09:30','10:00','10:30','11:00','11:30','12:00','12:30'] },
+            { label:'Tarde',  slots:['17:00','17:30','18:00','18:30','19:00','19:30','20:00','20:30'] },
+          ].map(franja => (
+            <div key={franja.label}>
+              <Label>{franja.label}</Label>
+              <div style={{ display:'flex', flexWrap:'wrap', gap:'4px' }}>
+                {franja.slots.map(h => (
+                  <span key={h} style={{ background:'rgba(232,25,44,0.08)', color:'#E8192C',
+                    border:'1px solid rgba(232,25,44,0.2)', padding:'2px 8px', borderRadius:'2px',
+                    fontSize:'0.7rem', fontFamily:"'Oswald',sans-serif", letterSpacing:'0.05em' }}>{h}</span>
+                ))}
+              </div>
+            </div>
+          ))}
         </div>
       </Section>
 

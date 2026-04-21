@@ -100,14 +100,15 @@ const SERVICIOS = [
   { value: 'Coloración',    icon: '🎨', desc: 'Tinte y coloración'      },
 ]
 
-// ─── Generar horarios 9:00 a 19:00 cada 30 min ────────────────────────────────
-const TODOS_HORARIOS = Array.from({ length: 21 }, (_, i) => {
-  const t = 9 * 60 + i * 30
-  if (t >= 19 * 60) return null
-  const h = Math.floor(t / 60).toString().padStart(2, '0')
-  const m = (t % 60).toString().padStart(2, '0')
-  return `${h}:${m}`
-}).filter(Boolean)
+// ─── Horarios disponibles: mañana 09-13, tarde 17-21 (cada 30 min) ────────────
+function generarFranja(desdeH, hastaH) {
+  const slots = []
+  for (let t = desdeH * 60; t < hastaH * 60; t += 30) {
+    slots.push(`${Math.floor(t/60).toString().padStart(2,'0')}:${(t%60).toString().padStart(2,'0')}`)
+  }
+  return slots
+}
+const TODOS_HORARIOS = [...generarFranja(9, 13), ...generarFranja(17, 21)]
 
 // ─── Barra de progreso ────────────────────────────────────────────────────────
 function BarraProgreso({ paso }) {
