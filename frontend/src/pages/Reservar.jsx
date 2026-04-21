@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { turnosAPI, disponibilidadAPI } from '../utils/api'
+import { turnosAPI, disponibilidadAPI, serviciosAPI, barberiaAPI } from '../utils/api'
 import { format, addDays, startOfToday, isBefore, isToday } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { ChevronLeft, ChevronRight, CheckCircle, Loader, Scissors, Clock, User, Phone, Calendar } from 'lucide-react'
@@ -91,14 +91,22 @@ const S = {
   },
 }
 
-// ─── Servicios disponibles ────────────────────────────────────────────────────
-const SERVICIOS = [
-  { value: 'Corte de pelo', icon: '✂️', desc: 'Corte clásico o moderno' },
-  { value: 'Barba',         icon: '🪒', desc: 'Perfilado y afeitado'    },
-  { value: 'Corte + Barba', icon: '💈', desc: 'Pack completo'           },
-  { value: 'Degradé',       icon: '⚡', desc: 'Degradé con máquina'     },
-  { value: 'Coloración',    icon: '🎨', desc: 'Tinte y coloración'      },
-]
+// ─── Íconos para servicios conocidos (fallback ✂️ para los personalizados) ────
+const ICONOS = {
+  'corte de pelo': { icon:'✂️', desc:'Corte clásico o moderno' },
+  'barba':         { icon:'🪒', desc:'Perfilado y afeitado'    },
+  'corte + barba': { icon:'💈', desc:'Pack completo'           },
+  'degradé':       { icon:'⚡', desc:'Degradé con máquina'     },
+  'coloración':    { icon:'🎨', desc:'Tinte y coloración'      },
+  'permanente':    { icon:'🌀', desc:'Permanente'              },
+}
+function toServicio(nombre) {
+  const m = ICONOS[nombre.toLowerCase()] || { icon:'✂️', desc:'' }
+  return { value: nombre, ...m }
+}
+const SERVICIOS_DEFAULT = [
+  'Corte de pelo','Barba','Corte + Barba','Degradé','Coloración',
+].map(toServicio)
 
 // ─── Horarios disponibles: mañana 09-13, tarde 17-21 (cada 30 min) ────────────
 function generarFranja(desdeH, hastaH) {
@@ -149,14 +157,14 @@ function BarraProgreso({ paso }) {
 }
 
 // ─── PASO 1: Elegir servicio ──────────────────────────────────────────────────
-function PasoServicio({ onNext }) {
+function PasoServicio({ onNext, servicios }) {
   const [seleccionado, setSeleccionado] = useState(null)
   return (
     <div>
       <div style={S.stepTitle}>¿Qué servicio necesitás?</div>
       <div style={S.stepSub}>Elegí una opción para continuar</div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '1.25rem' }}>
-        {SERVICIOS.map(s => (
+        {servicios.map(s => (
           <button key={s.value} onClick={() => setSeleccionado(s.value)}
             style={{
               display: 'flex', alignItems: 'center', gap: '14px',
@@ -523,13 +531,19 @@ export default function Reservar() {
   const [dia, setDia]             = useState(null)
   const [hora, setHora]           = useState(null)
   const [turnoCreado, setTurno]   = useState(null)
-  const [config, setConfig]       = useState({ barbershopName: 'BarberApp' })
+  const [servicios, setServicios] = useState(SERVICIOS_DEFAULT)
+  const [nombreBarberia, setNombreBarberia] = useState('Reserva tu turno')
 
   useEffect(() => {
-    try {
-      const c = localStorage.getItem('barbershop_config')
-      if (c) setConfig(JSON.parse(c))
-    } catch {}
+    serviciosAPI.get()
+      .then(res => {
+        if (res.data.servicios?.length)
+          setServicios(res.data.servicios.map(toServicio))
+      })
+      .catch(() => {})
+    barberiaAPI.get()
+      .then(res => { if (res.data.barbershop_name) setNombreBarberia(res.data.barbershop_name) })
+      .catch(() => {})
   }, [])
 
   const irAPaso = (n) => { setPaso(n); window.scrollTo(0,0) }
@@ -547,7 +561,7 @@ export default function Reservar() {
             </div>
             <div style={{ fontFamily:"'Barlow',sans-serif", fontSize:'0.58rem',
               color:'#475569', letterSpacing:'0.2em', textTransform:'uppercase' }}>
-              {config.barbershopName || 'Reserva tu turno'}
+              {nombreBarberia}
             </div>
           </div>
         </div>
@@ -559,7 +573,7 @@ export default function Reservar() {
 
         <div style={S.card}>
           {paso === 0 && (
-            <PasoServicio onNext={v => { setServicio(v); irAPaso(1) }} />
+            <PasoServicio servicios={servicios} onNext={v => { setServicio(v); irAPaso(1) }} />
           )}
           {paso === 1 && (
             <PasoDia

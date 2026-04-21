@@ -50,4 +50,9 @@ export const disponibilidadAPI = {
   desbloquear: (fecha) => api.delete(`/config/bloquear/${fecha}`),
 }
 
+export const serviciosAPI = {
+  get:  ()          => api.get('/config/servicios'),
+  save: (servicios) => api.put('/config/servicios', { servicios }),
+}
+
 export default api

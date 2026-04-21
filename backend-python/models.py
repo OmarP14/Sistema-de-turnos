@@ -26,6 +26,7 @@ class ConfigBarbershop(Base):
     owner_phone = Column(String, nullable=True)
     whatsapp_phone_number_id = Column(String, nullable=True)
     whatsapp_access_token = Column(String, nullable=True)
+    servicios = Column(String, nullable=True)
 
 
 class FechaBloqueada(Base):

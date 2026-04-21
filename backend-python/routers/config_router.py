@@ -53,6 +53,28 @@ def desbloquear(fecha: str, db: Session = Depends(get_db)):
     return {"fecha": fecha, "bloqueada": False}
 
 
+SERVICIOS_DEFAULT = "Corte de pelo,Barba,Corte + Barba,Degradé,Coloración"
+
+
+@router.get("/servicios")
+def get_servicios(db: Session = Depends(get_db)):
+    cfg = db.query(ConfigBarbershop).filter(ConfigBarbershop.id == 1).first()
+    raw = (cfg.servicios if cfg and cfg.servicios else SERVICIOS_DEFAULT)
+    return {"servicios": [s.strip() for s in raw.split(",") if s.strip()]}
+
+
+@router.put("/servicios", dependencies=[Depends(get_current_user)])
+def update_servicios(body: dict, db: Session = Depends(get_db)):
+    servicios: list = body.get("servicios", [])
+    cfg = db.query(ConfigBarbershop).filter(ConfigBarbershop.id == 1).first()
+    if not cfg:
+        cfg = ConfigBarbershop(id=1)
+        db.add(cfg)
+    cfg.servicios = ",".join(s.strip() for s in servicios if s.strip())
+    db.commit()
+    return {"servicios": servicios}
+
+
 @router.get("/barberia", dependencies=[Depends(get_current_user)])
 def get_barberia(db: Session = Depends(get_db)):
     cfg = db.query(ConfigBarbershop).filter(ConfigBarbershop.id == 1).first()

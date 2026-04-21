@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Save, CheckCircle, X } from 'lucide-react'
 import { addDays, startOfToday, format } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { disponibilidadAPI, barberiaAPI } from '../utils/api'
+import { disponibilidadAPI, barberiaAPI, serviciosAPI } from '../utils/api'
 
 const SERVICIOS_DEFAULT = ['Corte de pelo','Barba','Corte + Barba','Degradé','Coloración']
 
@@ -33,9 +33,9 @@ const Section = ({ title, children }) => (
 
 export default function Configuracion() {
   const [guardado, setGuardado] = useState(false)
-  const [config, setConfig] = useState({
-    servicios:SERVICIOS_DEFAULT, nuevoServicio:'',
-  })
+  const [servicios, setServicios] = useState(SERVICIOS_DEFAULT)
+  const [nuevoServicio, setNuevoServicio] = useState('')
+  const [guardandoServicios, setGuardandoServicios] = useState(false)
 
   // Estado de disponibilidad (viene del backend)
   const [diasLaborales, setDiasLaborales] = useState([1,2,3,4,5,6])
@@ -51,12 +51,11 @@ export default function Configuracion() {
   const [guardandoBarberia, setGuardandoBarberia] = useState(false)
   const [mensajeBarberia, setMensajeBarberia] = useState('')
 
-  // Cargar config local
+  // Cargar servicios del backend
   useEffect(() => {
-    try {
-      const c = localStorage.getItem('barbershop_config')
-      if (c) setConfig(p => ({ ...p, ...JSON.parse(c), nuevoServicio:'' }))
-    } catch {}
+    serviciosAPI.get()
+      .then(res => { if (res.data.servicios?.length) setServicios(res.data.servicios) })
+      .catch(() => {})
   }, [])
 
   // Cargar disponibilidad del backend
@@ -90,18 +89,25 @@ export default function Configuracion() {
     }
   }
 
-  // ── Config local ───────────────────────────────────────────────────────────
-  const set  = (k,v) => setConfig(f => ({ ...f, [k]:v }))
-  const addSvc = () => {
-    if (!config.nuevoServicio.trim()) return
-    set('servicios', [...config.servicios, config.nuevoServicio.trim()])
-    set('nuevoServicio', '')
+  // ── Servicios ──────────────────────────────────────────────────────────────
+  const addSvc = async () => {
+    if (!nuevoServicio.trim()) return
+    const nuevos = [...servicios, nuevoServicio.trim()]
+    setNuevoServicio('')
+    setServicios(nuevos)
+    setGuardandoServicios(true)
+    try { await serviciosAPI.save(nuevos) } catch {}
+    finally { setGuardandoServicios(false) }
   }
-  const delSvc = (i) => set('servicios', config.servicios.filter((_,j) => j !== i))
+  const delSvc = async (i) => {
+    const nuevos = servicios.filter((_,j) => j !== i)
+    setServicios(nuevos)
+    setGuardandoServicios(true)
+    try { await serviciosAPI.save(nuevos) } catch {}
+    finally { setGuardandoServicios(false) }
+  }
 
   const guardar = () => {
-    const { nuevoServicio: _, ...d } = config
-    localStorage.setItem('barbershop_config', JSON.stringify(d))
     setGuardado(true)
     setTimeout(() => setGuardado(false), 2500)
   }
@@ -347,21 +353,28 @@ export default function Configuracion() {
       {/* ── Servicios ── */}
       <Section title="Servicios">
         <div style={{ display:'flex', flexWrap:'wrap', gap:'6px' }}>
-          {config.servicios.map((s,i) => (
+          {servicios.map((s,i) => (
             <div key={i} style={{ display:'flex', alignItems:'center', gap:'6px', padding:'4px 10px',
               background:'rgba(30,111,217,0.08)', border:'1px solid rgba(30,111,217,0.2)', borderRadius:'2px' }}>
               <span style={{ color:'#F8F8F8', fontSize:'0.82rem' }}>{s}</span>
-              <button onClick={() => delSvc(i)} style={{ color:'#E8192C', background:'none',
-                border:'none', cursor:'pointer', fontSize:'0.7rem', lineHeight:1 }}>✕</button>
+              <button onClick={() => delSvc(i)} disabled={guardandoServicios}
+                style={{ color:'#E8192C', background:'none', border:'none',
+                  cursor:'pointer', fontSize:'0.7rem', lineHeight:1 }}>✕</button>
             </div>
           ))}
         </div>
         <div style={{ display:'flex', gap:'8px' }}>
           <input className="input-field" placeholder="Nuevo servicio..."
-            value={config.nuevoServicio} onChange={e => set('nuevoServicio', e.target.value)}
+            value={nuevoServicio} onChange={e => setNuevoServicio(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && addSvc()} />
-          <button onClick={addSvc} className="btn-primary" style={{ whiteSpace:'nowrap' }}>+ AGREGAR</button>
+          <button onClick={addSvc} disabled={guardandoServicios}
+            className="btn-primary" style={{ whiteSpace:'nowrap' }}>
+            {guardandoServicios ? '…' : '+ AGREGAR'}
+          </button>
         </div>
+        <p style={{ fontFamily:"'Barlow',sans-serif", fontSize:'0.72rem', color:'#475569', margin:0 }}>
+          Los cambios se guardan automáticamente y aparecen en el formulario de reserva.
+        </p>
       </Section>
 
       <button onClick={guardar} className="btn-primary" style={{ width:'100%', justifyContent:'center' }}>

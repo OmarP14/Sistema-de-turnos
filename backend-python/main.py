@@ -22,6 +22,7 @@ def _migrate():
             ("owner_phone", "TEXT"),
             ("whatsapp_phone_number_id", "TEXT"),
             ("whatsapp_access_token", "TEXT"),
+            ("servicios", "TEXT"),
         ]:
             if col not in cols:
                 conn.execute(text(f"ALTER TABLE config_barbershop ADD COLUMN {col} {ddl}"))
