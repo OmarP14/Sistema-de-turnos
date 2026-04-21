@@ -44,10 +44,11 @@ export const barberiaAPI = {
 }
 
 export const disponibilidadAPI = {
-  get:         ()      => api.get('/config/disponibilidad'),
-  updateDias:  (dias)  => api.put('/config/dias-laborales', { dias }),
-  bloquear:    (fecha) => api.post(`/config/bloquear/${fecha}`),
-  desbloquear: (fecha) => api.delete(`/config/bloquear/${fecha}`),
+  get:              ()      => api.get('/config/disponibilidad'),
+  updateDias:       (dias)  => api.put('/config/dias-laborales', { dias }),
+  bloquear:         (fecha) => api.post(`/config/bloquear/${fecha}`),
+  desbloquear:      (fecha) => api.delete(`/config/bloquear/${fecha}`),
+  importarFeriados: ()      => api.post('/config/importar-feriados'),
 }
 
 export const serviciosAPI = {

@@ -1,6 +1,7 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from datetime import date
+import requests as http_requests
 from database import get_db
 from models import ConfigBarbershop, FechaBloqueada
 from schemas import DisponibilidadResponse, DiasLaboralesRequest, BarberiaConfig
@@ -73,6 +74,42 @@ def update_servicios(body: dict, db: Session = Depends(get_db)):
     cfg.servicios = ",".join(s.strip() for s in servicios if s.strip())
     db.commit()
     return {"servicios": servicios}
+
+
+NAGER_URL = "https://date.nager.at/api/v3/PublicHolidays/{year}/AR"
+
+
+@router.post("/importar-feriados", dependencies=[Depends(get_current_user)])
+def importar_feriados(db: Session = Depends(get_db)):
+    hoy = date.today()
+    años = {hoy.year, hoy.year + 1}
+    feriados: list[dict] = []
+
+    for año in sorted(años):
+        try:
+            resp = http_requests.get(NAGER_URL.format(year=año), timeout=8)
+            resp.raise_for_status()
+            feriados.extend(resp.json())
+        except Exception as e:
+            raise HTTPException(status_code=502,
+                detail=f"No se pudo obtener feriados de {año}: {e}")
+
+    hoy_str = str(hoy)
+    importados = 0
+    for f in feriados:
+        fecha = f.get("date", "")
+        if fecha < hoy_str:
+            continue
+        existe = db.query(FechaBloqueada).filter(FechaBloqueada.fecha == fecha).first()
+        if not existe:
+            db.add(FechaBloqueada(fecha=fecha))
+            importados += 1
+
+    db.commit()
+
+    nombres = {f["date"]: f.get("localName", f.get("name", "")) for f in feriados
+               if f.get("date", "") >= hoy_str}
+    return {"importados": importados, "feriados": nombres}
 
 
 @router.get("/barberia", dependencies=[Depends(get_current_user)])

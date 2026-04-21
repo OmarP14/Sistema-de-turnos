@@ -42,6 +42,8 @@ export default function Configuracion() {
   const [fechasBloqueadas, setFechasBloqueadas] = useState([])
   const [guardandoDias, setGuardandoDias] = useState(false)
   const [mensajeDias, setMensajeDias] = useState('')
+  const [importando, setImportando] = useState(false)
+  const [mensajeFeriados, setMensajeFeriados] = useState('')
 
   // Configuración de la barbería (viene del backend)
   const [barberia, setBarberia] = useState({
@@ -129,6 +131,29 @@ export default function Configuracion() {
       setMensajeDias('Error al guardar')
     } finally {
       setGuardandoDias(false)
+    }
+  }
+
+  // ── Importar feriados ──────────────────────────────────────────────────────
+  const importarFeriados = async () => {
+    setImportando(true)
+    setMensajeFeriados('')
+    try {
+      const res = await disponibilidadAPI.importarFeriados()
+      const { importados, feriados } = res.data
+      // Actualizar lista local con los nuevos feriados
+      const nuevasFechas = Object.keys(feriados)
+      setFechasBloqueadas(prev => [...new Set([...prev, ...nuevasFechas])])
+      setMensajeFeriados(
+        importados > 0
+          ? `✓ ${importados} feriado${importados > 1 ? 's' : ''} importado${importados > 1 ? 's' : ''}`
+          : '✓ Ya estaban todos importados'
+      )
+    } catch {
+      setMensajeFeriados('✕ Error al importar feriados')
+    } finally {
+      setImportando(false)
+      setTimeout(() => setMensajeFeriados(''), 4000)
     }
   }
 
@@ -254,6 +279,25 @@ export default function Configuracion() {
         <p style={{ fontFamily:"'Barlow',sans-serif", fontSize:'0.8rem', color:'#64748b', margin:0 }}>
           Tocá un día para bloquearlo. Los días bloqueados no estarán disponibles para reservas.
         </p>
+
+        <div style={{ display:'flex', alignItems:'center', gap:'10px', flexWrap:'wrap' }}>
+          <button
+            onClick={importarFeriados}
+            disabled={importando}
+            className="btn-primary"
+            style={{ alignSelf:'flex-start', gap:'6px' }}
+          >
+            {importando ? '⏳ Importando…' : '🇦🇷 Importar feriados nacionales'}
+          </button>
+          {mensajeFeriados && (
+            <span style={{
+              fontFamily:"'Barlow',sans-serif", fontSize:'0.8rem',
+              color: mensajeFeriados.startsWith('✕') ? '#fb7185' : '#86efac',
+            }}>
+              {mensajeFeriados}
+            </span>
+          )}
+        </div>
 
         {proximosDias.length === 0 ? (
           <p style={{ color:'#475569', fontFamily:"'Barlow',sans-serif", fontSize:'0.82rem' }}>
