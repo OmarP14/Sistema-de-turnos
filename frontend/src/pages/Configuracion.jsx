@@ -260,62 +260,72 @@ export default function Configuracion() {
             No hay días laborales activos para bloquear.
           </p>
         ) : (
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'6px' }}>
-            {proximosDias.map(dia => {
-              const fechaStr = format(dia, 'yyyy-MM-dd')
-              const bloqueado = fechasBloqueadas.includes(fechaStr)
-              const diaNombre = format(dia, 'EEE', { locale: es }).toUpperCase().replace('.','')
-              const diaMes = format(dia, 'd MMM', { locale: es })
-
-              return (
-                <button
-                  key={fechaStr}
-                  onClick={() => toggleFecha(fechaStr)}
-                  title={bloqueado ? 'Click para desbloquear' : 'Click para bloquear'}
-                  style={{
-                    padding:'8px 4px',
-                    borderRadius:'6px',
-                    border: bloqueado ? '1px solid rgba(232,25,44,0.5)' : '1px solid #1a1a1a',
-                    background: bloqueado ? 'rgba(232,25,44,0.12)' : 'rgba(255,255,255,0.03)',
-                    cursor:'pointer',
-                    display:'flex', flexDirection:'column', alignItems:'center', gap:'2px',
-                    position:'relative', transition:'all 0.15s',
-                  }}
-                >
-                  {bloqueado && (
-                    <div style={{
-                      position:'absolute', top:'4px', right:'4px',
-                      background:'#E8192C', borderRadius:'50%',
-                      width:'14px', height:'14px',
-                      display:'flex', alignItems:'center', justifyContent:'center',
-                    }}>
-                      <X size={9} style={{ color:'#fff' }} />
-                    </div>
-                  )}
-                  <span style={{ fontFamily:"'Oswald',sans-serif", fontSize:'0.58rem',
-                    letterSpacing:'0.1em',
-                    color: bloqueado ? '#E8192C' : '#475569' }}>
-                    {diaNombre}
-                  </span>
-                  <span style={{ fontFamily:"'Bebas Neue',cursive", fontSize:'1.2rem',
-                    lineHeight:1,
-                    color: bloqueado ? '#fb7185' : '#F8F8F8' }}>
-                    {format(dia, 'd')}
-                  </span>
-                  <span style={{ fontFamily:"'Barlow',sans-serif", fontSize:'0.6rem',
-                    color: bloqueado ? '#E8192C' : '#334155',
-                    textTransform:'uppercase' }}>
-                    {format(dia, 'MMM', { locale: es })}
-                  </span>
-                  {bloqueado && (
-                    <span style={{ fontFamily:"'Oswald',sans-serif", fontSize:'0.5rem',
-                      letterSpacing:'0.08em', color:'#E8192C', marginTop:'1px' }}>
-                      BLOQUEADO
-                    </span>
-                  )}
-                </button>
-              )
-            })}
+          <div style={{ display:'flex', flexDirection:'column', gap:'1.25rem' }}>
+            {Object.entries(
+              proximosDias.reduce((acc, dia) => {
+                const mes = format(dia, 'MMMM yyyy', { locale: es })
+                if (!acc[mes]) acc[mes] = []
+                acc[mes].push(dia)
+                return acc
+              }, {})
+            ).map(([mes, dias]) => (
+              <div key={mes}>
+                <div style={{
+                  fontFamily:"'Oswald',sans-serif", fontSize:'0.72rem',
+                  letterSpacing:'0.14em', textTransform:'uppercase',
+                  color:'#64748b', marginBottom:'8px',
+                  borderBottom:'1px solid #1a1a1a', paddingBottom:'6px',
+                }}>
+                  {mes}
+                </div>
+                <div style={{ display:'grid', gridTemplateColumns:'repeat(5,1fr)', gap:'6px' }}>
+                  {dias.map(dia => {
+                    const fechaStr = format(dia, 'yyyy-MM-dd')
+                    const bloqueado = fechasBloqueadas.includes(fechaStr)
+                    const diaNombre = format(dia, 'EEE', { locale: es }).toUpperCase().replace('.','')
+                    return (
+                      <button
+                        key={fechaStr}
+                        onClick={() => toggleFecha(fechaStr)}
+                        title={bloqueado ? 'Click para desbloquear' : 'Click para bloquear'}
+                        style={{
+                          padding:'8px 4px', borderRadius:'6px',
+                          border: bloqueado ? '1px solid rgba(232,25,44,0.5)' : '1px solid #1a1a1a',
+                          background: bloqueado ? 'rgba(232,25,44,0.12)' : 'rgba(255,255,255,0.03)',
+                          cursor:'pointer', display:'flex', flexDirection:'column',
+                          alignItems:'center', gap:'2px', position:'relative', transition:'all 0.15s',
+                        }}
+                      >
+                        {bloqueado && (
+                          <div style={{
+                            position:'absolute', top:'3px', right:'3px',
+                            background:'#E8192C', borderRadius:'50%',
+                            width:'12px', height:'12px',
+                            display:'flex', alignItems:'center', justifyContent:'center',
+                          }}>
+                            <X size={8} style={{ color:'#fff' }} />
+                          </div>
+                        )}
+                        <span style={{ fontFamily:"'Oswald',sans-serif", fontSize:'0.55rem',
+                          letterSpacing:'0.1em', color: bloqueado ? '#E8192C' : '#475569' }}>
+                          {diaNombre}
+                        </span>
+                        <span style={{ fontFamily:"'Bebas Neue',cursive", fontSize:'1.2rem',
+                          lineHeight:1, color: bloqueado ? '#fb7185' : '#F8F8F8' }}>
+                          {format(dia, 'd')}
+                        </span>
+                        {bloqueado && (
+                          <span style={{ fontFamily:"'Oswald',sans-serif", fontSize:'0.45rem',
+                            letterSpacing:'0.06em', color:'#E8192C', marginTop:'1px' }}>
+                            BLOQ
+                          </span>
+                        )}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            ))}
           </div>
         )}
 
