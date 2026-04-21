@@ -307,46 +307,61 @@ function PasoHorario({ dia, onNext, onBack }) {
           <Loader size={24} style={{ animation: 'spin 1s linear infinite', margin: '0 auto' }} />
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '8px', marginBottom: '1.25rem' }}>
-          {TODOS_HORARIOS.map(hora => {
-            const estaOcupado = ocupados.includes(hora)
-            // Si es hoy, bloquear horarios pasados
-            const [h, m] = hora.split(':').map(Number)
-            const horaDate = new Date(dia)
-            horaDate.setHours(h, m, 0, 0)
-            const esPasado = isToday(dia) && horaDate <= ahora
-            const bloqueado = estaOcupado || esPasado
-            const esSelec = seleccionado === hora
-
-            return (
-              <button key={hora} disabled={bloqueado}
-                onClick={() => !bloqueado && setSeleccionado(hora)}
-                style={{
-                  padding: '12px 8px', borderRadius: '8px',
-                  fontFamily: "'Bebas Neue',cursive", fontSize: '1.2rem',
-                  letterSpacing: '0.05em', cursor: bloqueado ? 'not-allowed' : 'pointer',
-                  border: esSelec ? '1px solid #E8192C'
-                        : bloqueado ? '1px solid rgba(59,130,246,0.06)'
-                        : '1px solid rgba(59,130,246,0.15)',
-                  background: esSelec ? 'rgba(232,25,44,0.12)'
-                            : bloqueado ? 'rgba(5,12,28,0.2)'
-                            : 'rgba(5,12,28,0.5)',
-                  color: esSelec ? '#F8F8F8' : bloqueado ? '#1e293b' : '#93c5fd',
-                  transition: 'all 0.15s',
-                  boxShadow: esSelec ? '0 0 12px rgba(232,25,44,0.25)' : 'none',
-                  position: 'relative',
-                }}>
-                {hora}
-                {estaOcupado && !esPasado && (
-                  <div style={{ position: 'absolute', bottom: '3px', left: '50%', transform: 'translateX(-50%)',
-                    fontSize: '0.45rem', fontFamily: "'Barlow',sans-serif", color: '#475569',
-                    letterSpacing: '0.05em', textTransform: 'uppercase' }}>
-                    OCUPADO
-                  </div>
-                )}
-              </button>
-            )
-          })}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.25rem' }}>
+          {[
+            { label: '🌅 Mañana', slots: generarFranja(9, 13) },
+            { label: '🌆 Tarde',  slots: generarFranja(17, 22) },
+          ].map(franja => (
+            <div key={franja.label}>
+              <div style={{
+                fontFamily: "'Oswald',sans-serif", fontSize: '0.7rem',
+                letterSpacing: '0.12em', textTransform: 'uppercase',
+                color: '#475569', marginBottom: '8px',
+                display: 'flex', alignItems: 'center', gap: '8px',
+              }}>
+                {franja.label}
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '6px' }}>
+                {franja.slots.map(hora => {
+                  const estaOcupado = ocupados.includes(hora)
+                  const [h, m] = hora.split(':').map(Number)
+                  const horaDate = new Date(dia)
+                  horaDate.setHours(h, m, 0, 0)
+                  const esPasado = isToday(dia) && horaDate <= ahora
+                  const bloqueado = estaOcupado || esPasado
+                  const esSelec = seleccionado === hora
+                  return (
+                    <button key={hora} disabled={bloqueado}
+                      onClick={() => !bloqueado && setSeleccionado(hora)}
+                      style={{
+                        padding: '10px 4px', borderRadius: '8px',
+                        fontFamily: "'Bebas Neue',cursive", fontSize: '1.1rem',
+                        letterSpacing: '0.05em', cursor: bloqueado ? 'not-allowed' : 'pointer',
+                        border: esSelec ? '1px solid #E8192C'
+                              : bloqueado ? '1px solid rgba(59,130,246,0.06)'
+                              : '1px solid rgba(59,130,246,0.15)',
+                        background: esSelec ? 'rgba(232,25,44,0.12)'
+                                  : bloqueado ? 'rgba(5,12,28,0.2)'
+                                  : 'rgba(5,12,28,0.5)',
+                        color: esSelec ? '#F8F8F8' : bloqueado ? '#1e293b' : '#93c5fd',
+                        transition: 'all 0.15s',
+                        boxShadow: esSelec ? '0 0 12px rgba(232,25,44,0.25)' : 'none',
+                        position: 'relative',
+                      }}>
+                      {hora}
+                      {estaOcupado && !esPasado && (
+                        <div style={{ position: 'absolute', bottom: '3px', left: '50%', transform: 'translateX(-50%)',
+                          fontSize: '0.4rem', fontFamily: "'Barlow',sans-serif", color: '#475569',
+                          letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                          OCUPADO
+                        </div>
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
