@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { turnosAPI, disponibilidadAPI, serviciosAPI, barberiaAPI } from '../utils/api'
-import { format, addDays, startOfToday, isBefore, isToday } from 'date-fns'
+import { format, startOfToday, isToday } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { ChevronLeft, ChevronRight, CheckCircle, Loader, Scissors, Clock, User, Phone, Calendar } from 'lucide-react'
 
@@ -209,12 +209,22 @@ function PasoDia({ onNext, onBack }) {
       .finally(() => setCargando(false))
   }, [])
 
-  const dias = Array.from({ length: 21 }, (_, i) => addDays(hoy, i))
-    .filter(d => {
-      if (!disponibilidad.diasLaborales.includes(d.getDay())) return false
-      if (disponibilidad.fechasBloqueadas.includes(format(d, 'yyyy-MM-dd'))) return false
-      return true
+  const { diasLaborales, fechasBloqueadas } = disponibilidad
+
+  // 2 meses: actual + siguiente
+  const meses = Array.from({ length: 2 }, (_, i) =>
+    new Date(hoy.getFullYear(), hoy.getMonth() + i, 1)
+  )
+
+  const hayDisponibles = meses.some(primerDia => {
+    const diasEnMes = new Date(primerDia.getFullYear(), primerDia.getMonth() + 1, 0).getDate()
+    return Array.from({ length: diasEnMes }, (_, i) =>
+      new Date(primerDia.getFullYear(), primerDia.getMonth(), i + 1)
+    ).some(d => {
+      const f = format(d, 'yyyy-MM-dd')
+      return d >= hoy && diasLaborales.includes(d.getDay()) && !fechasBloqueadas.includes(f)
     })
+  })
 
   if (cargando) return (
     <div style={{ textAlign:'center', padding:'2rem', color:'#64748b' }}>
@@ -225,9 +235,9 @@ function PasoDia({ onNext, onBack }) {
   return (
     <div>
       <div style={S.stepTitle}>¿Qué día preferís?</div>
-      <div style={S.stepSub}>Próximos días disponibles</div>
+      <div style={S.stepSub}>Seleccioná un día disponible</div>
 
-      {dias.length === 0 ? (
+      {!hayDisponibles ? (
         <div style={{ textAlign:'center', padding:'2rem',
           background:'rgba(59,130,246,0.06)', border:'1px solid rgba(59,130,246,0.15)',
           borderRadius:'8px', marginBottom:'1.25rem' }}>
@@ -235,37 +245,102 @@ function PasoDia({ onNext, onBack }) {
             fontSize:'0.85rem', letterSpacing:'0.1em', margin:0 }}>
             No hay turnos disponibles en los próximos días.
           </p>
-          <p style={{ color:'#475569', fontFamily:"'Barlow',sans-serif",
-            fontSize:'0.78rem', marginTop:'8px' }}>
-            Volvé a consultar pronto.
-          </p>
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '8px', marginBottom: '1.25rem' }}>
-          {dias.map(dia => {
-            const esHoy = isToday(dia)
+        <div style={{ display:'flex', flexDirection:'column', gap:'1.25rem', marginBottom:'1.25rem' }}>
+          {meses.map(primerDia => {
+            const año = primerDia.getFullYear()
+            const mes = primerDia.getMonth()
+            const diasEnMes = new Date(año, mes + 1, 0).getDate()
+            const offset = (primerDia.getDay() + 6) % 7
+
             return (
-              <button key={dia.toISOString()} onClick={() => onNext(dia)}
-                style={{
-                  padding: '12px 8px', borderRadius: '8px', cursor: 'pointer',
-                  border: '1px solid rgba(59,130,246,0.15)',
-                  background: esHoy ? 'rgba(232,25,44,0.08)' : 'rgba(5,12,28,0.5)',
-                  transition: 'all 0.2s', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px',
-                }}
-                onMouseEnter={e => { e.currentTarget.style.border='1px solid rgba(232,25,44,0.4)'; e.currentTarget.style.background='rgba(232,25,44,0.08)' }}
-                onMouseLeave={e => { e.currentTarget.style.border='1px solid rgba(59,130,246,0.15)'; e.currentTarget.style.background= esHoy ? 'rgba(232,25,44,0.08)' : 'rgba(5,12,28,0.5)' }}>
-                <span style={{ fontFamily:"'Oswald',sans-serif", fontSize:'0.62rem',
-                  letterSpacing:'0.1em', textTransform:'uppercase', color: esHoy ? '#E8192C' : '#64748b' }}>
-                  {esHoy ? 'HOY' : format(dia, 'EEE', { locale: es }).toUpperCase().replace('.', '')}
-                </span>
-                <span style={{ fontFamily:"'Bebas Neue',cursive", fontSize:'1.6rem',
-                  color: '#F8F8F8', lineHeight: 1 }}>
-                  {format(dia, 'd')}
-                </span>
-                <span style={{ fontFamily:"'Barlow',sans-serif", fontSize:'0.7rem', color:'#64748b' }}>
-                  {format(dia, 'MMM', { locale: es })}
-                </span>
-              </button>
+              <div key={`${año}-${mes}`}>
+                {/* Encabezado mes */}
+                <div style={{
+                  fontFamily:"'Bebas Neue',cursive", fontSize:'1rem',
+                  letterSpacing:'0.1em', color:'#93c5fd',
+                  borderBottom:'1px solid rgba(59,130,246,0.15)',
+                  paddingBottom:'6px', marginBottom:'8px', textTransform:'capitalize',
+                }}>
+                  {format(primerDia, 'MMMM yyyy', { locale: es })}
+                </div>
+
+                <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', gap:'4px' }}>
+                  {/* Cabecera días */}
+                  {['L','M','X','J','V','S','D'].map(d => (
+                    <div key={d} style={{
+                      textAlign:'center', fontFamily:"'Oswald',sans-serif",
+                      fontSize:'0.6rem', letterSpacing:'0.1em',
+                      color:'rgba(59,130,246,0.5)', paddingBottom:'4px',
+                    }}>{d}</div>
+                  ))}
+
+                  {/* Celdas vacías */}
+                  {Array.from({ length: offset }, (_, i) => <div key={`e${i}`} />)}
+
+                  {/* Días */}
+                  {Array.from({ length: diasEnMes }, (_, i) => {
+                    const dia = new Date(año, mes, i + 1)
+                    const fechaStr = format(dia, 'yyyy-MM-dd')
+                    const esPasado = dia < hoy
+                    const esHoy = fechaStr === format(hoy, 'yyyy-MM-dd')
+                    const esLaboral = diasLaborales.includes(dia.getDay())
+                    const estaBloqueado = fechasBloqueadas.includes(fechaStr)
+                    const disponible = !esPasado && esLaboral && !estaBloqueado
+
+                    if (esPasado || !esLaboral || estaBloqueado) {
+                      return (
+                        <div key={fechaStr} style={{
+                          textAlign:'center', padding:'8px 2px',
+                          fontFamily:"'Bebas Neue',cursive", fontSize:'1rem',
+                          color: esPasado || !esLaboral ? '#1e2d3d' : 'rgba(232,25,44,0.3)',
+                          position:'relative',
+                        }}>
+                          {i + 1}
+                          {estaBloqueado && !esPasado && (
+                            <div style={{
+                              position:'absolute', bottom:'2px', left:'50%',
+                              transform:'translateX(-50%)',
+                              width:'4px', height:'4px', borderRadius:'50%',
+                              background:'rgba(232,25,44,0.4)',
+                            }}/>
+                          )}
+                        </div>
+                      )
+                    }
+
+                    return (
+                      <button key={fechaStr} onClick={() => onNext(dia)}
+                        style={{
+                          padding:'8px 2px', borderRadius:'6px', cursor:'pointer',
+                          border: esHoy ? '1px solid rgba(232,25,44,0.6)' : '1px solid rgba(59,130,246,0.2)',
+                          background: esHoy ? 'rgba(232,25,44,0.1)' : 'rgba(5,12,28,0.5)',
+                          display:'flex', flexDirection:'column', alignItems:'center', gap:'1px',
+                          transition:'all 0.15s',
+                        }}
+                        onMouseEnter={e => {
+                          e.currentTarget.style.border = '1px solid rgba(232,25,44,0.6)'
+                          e.currentTarget.style.background = 'rgba(232,25,44,0.12)'
+                        }}
+                        onMouseLeave={e => {
+                          e.currentTarget.style.border = esHoy ? '1px solid rgba(232,25,44,0.6)' : '1px solid rgba(59,130,246,0.2)'
+                          e.currentTarget.style.background = esHoy ? 'rgba(232,25,44,0.1)' : 'rgba(5,12,28,0.5)'
+                        }}
+                      >
+                        <span style={{
+                          fontFamily:"'Bebas Neue',cursive", fontSize:'1.1rem',
+                          lineHeight:1, color: esHoy ? '#E8192C' : '#F8F8F8',
+                        }}>{i + 1}</span>
+                        {esHoy && (
+                          <span style={{ fontFamily:"'Oswald',sans-serif", fontSize:'0.45rem',
+                            letterSpacing:'0.08em', color:'#E8192C' }}>HOY</span>
+                        )}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
             )
           })}
         </div>
