@@ -103,12 +103,12 @@ const SERVICIOS = [
 // ─── Horarios disponibles: mañana 09-13, tarde 17-21 (cada 30 min) ────────────
 function generarFranja(desdeH, hastaH) {
   const slots = []
-  for (let t = desdeH * 60; t < hastaH * 60; t += 30) {
+  for (let t = desdeH * 60; t <= hastaH * 60; t += 30) {
     slots.push(`${Math.floor(t/60).toString().padStart(2,'0')}:${(t%60).toString().padStart(2,'0')}`)
   }
   return slots
 }
-const TODOS_HORARIOS = [...generarFranja(9, 13), ...generarFranja(17, 21)]
+const TODOS_HORARIOS = [...generarFranja(9, 13), ...generarFranja(17, 22)]
 
 // ─── Barra de progreso ────────────────────────────────────────────────────────
 function BarraProgreso({ paso }) {

@@ -327,8 +327,8 @@ export default function Configuracion() {
         </p>
         <div style={{ display:'flex', flexDirection:'column', gap:'8px' }}>
           {[
-            { label:'Mañana', slots:['09:00','09:30','10:00','10:30','11:00','11:30','12:00','12:30'] },
-            { label:'Tarde',  slots:['17:00','17:30','18:00','18:30','19:00','19:30','20:00','20:30'] },
+            { label:'Mañana', slots:['09:00','09:30','10:00','10:30','11:00','11:30','12:00','12:30','13:00'] },
+            { label:'Tarde',  slots:['17:00','17:30','18:00','18:30','19:00','19:30','20:00','20:30','21:00','21:30','22:00'] },
           ].map(franja => (
             <div key={franja.label}>
               <Label>{franja.label}</Label>
